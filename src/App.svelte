@@ -1,19 +1,22 @@
 <script lang="ts">
 import { runIdb } from './idb/run-idb';
+import { runSqlite } from './sqlite/run-sqlite';
 
 let running = false;
 
 const inProgress = Symbol('in progress');
 type Result = number | typeof inProgress;
-type Configuration = 'IndexedDB';
+type Configuration = 'IndexedDB' | 'SQLite OPFS SAH';
 
 let results: Record<Configuration, [Result, Result, Result]> = {
-  'IndexedDB': [0, 0, 0]
+  'IndexedDB': [0, 0, 0],
+  'SQLite OPFS SAH': [0, 0, 0]
 };
 
 async function runTests() {
   results = {
-    'IndexedDB': [0, 0, 0]
+    'IndexedDB': [0, 0, 0],
+    'SQLite OPFS SAH': [0, 0, 0]
   };
 
   const sources = [
@@ -32,6 +35,15 @@ async function runTests() {
       source: new URL(sources[i], document.location)
     });
     results['IndexedDB'][i] = result;
+  }
+
+  for (let i = 3; i < 6; i++) {
+    results['SQLite OPFS SAH'][i] = inProgress;
+    const result = await runSqlite({
+      batchSize: 2000,
+      source: new URL(sources[i], document.location)
+    });
+    results['SQLite OPFS SAH'][i] = result;
   }
 }
 

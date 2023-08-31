@@ -1,5 +1,3 @@
-import { Overwrite } from '../utils/type-helpers';
-
 export type WordRecord = {
   id: number;
 
