@@ -39,6 +39,6 @@ export async function runSqlite({
       reject(e);
     });
 
-    worker.postMessage({ type: 'start', batchSize, source });
+    worker.postMessage({ type: 'start', batchSize, source: source.toString() });
   });
 }
