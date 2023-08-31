@@ -1,0 +1,29 @@
+{
+  "name": "sqlite-test",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "repository": "https://github.com/birchill/sqlite-test/",
+  "author": "Brian Birtles <birtles@gmail.com>",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@rspack/cli": "0.3.1",
+    "@tsconfig/svelte": "5.0.2",
+    "prettier": "3.0.3",
+    "svelte": "4.2.0",
+    "svelte-check": "3.5.1",
+    "svelte-loader": "3.1.9",
+    "typescript": "5.2.2"
+  },
+  "dependencies": {
+    "@birchill/normal-jp": "1.5.0",
+    "idb": "7.1.1",
+    "superstruct": "1.0.3"
+  },
+  "scripts": {
+    "build": "rspack build",
+    "start": "rspack serve",
+    "validate": "svelte-check"
+  }
+}
