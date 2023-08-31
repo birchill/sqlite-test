@@ -19,6 +19,7 @@ const config = {
     mainFields: ['svelte', 'browser', 'module', 'main'],
   },
   output: {
+    clean: true,
     path: url.fileURLToPath(new URL('./public', import.meta.url)),
     filename: '[name].js',
     chunkFilename: '[name].[id].js',
@@ -53,6 +54,9 @@ const config = {
           globOptions: {
             dot: true,
           },
+        },
+        {
+          from: 'src/sqlite/sqlite3.wasm',
         },
       ],
     },

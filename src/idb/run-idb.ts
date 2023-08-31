@@ -58,9 +58,6 @@ export async function runIdb({
 }): Promise<number> {
   // Drop any existing database
   await deleteDB(DATABASE_NAME).catch(() => {});
-  console.log(`Fetching ${source}`);
-
-  const start = performance.now();
 
   // Create the database
   let db = await openDB<DatabaseSchema>(DATABASE_NAME, 1, {
@@ -91,9 +88,11 @@ export async function runIdb({
     },
   });
 
+  const start = performance.now();
   let records: Array<WordDownloadRecord> = [];
 
   // Get records and put them in the database
+  console.log(`Fetching ${source}`);
   for await (const record of getDownloadIterator({ source })) {
     records.push(record);
     if (records.length >= batchSize) {
