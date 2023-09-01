@@ -47,20 +47,34 @@ async function runTest(
 
     // Get records and put them in the database
     console.log(`Fetching ${source}`);
-    for await (const record of getDownloadIterator({
-      source: new URL(source),
-    })) {
-      records.push(record);
-      if (records.length >= batchSize) {
+
+    // Do transactions manually because the sqlite.js version doesn't support
+    // async functions. Note that if we actually want to ship this, however,
+    // we'll need to manage things so that any requests to the worker don't
+    // interrupt an ongoing transaction.
+    db.exec('BEGIN');
+
+    try {
+      for await (const record of getDownloadIterator({
+        source: new URL(source),
+      })) {
+        records.push(record);
+        if (records.length >= batchSize) {
+          await writeRecords(db, records);
+          records = [];
+        }
+      }
+
+      // Remaining records
+      if (records.length) {
         await writeRecords(db, records);
         records = [];
       }
-    }
 
-    // Remaining records
-    if (records.length) {
-      await writeRecords(db, records);
-      records = [];
+      db.exec('COMMIT');
+    } catch (e) {
+      db.exec('ROLLBACK');
+      throw e;
     }
 
     const dur = performance.now() - start;
