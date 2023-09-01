@@ -37,13 +37,13 @@ async function runTests() {
     results['IndexedDB'][i] = result;
   }
 
-  for (let i = 3; i < 6; i++) {
-    results['SQLite OPFS SAH'][i - 3] = inProgress;
+  for (let i = 0; i < 3; i++) {
+    results['SQLite OPFS SAH'][i] = inProgress;
     const result = await runSqlite({
       batchSize: 2000,
-      source: new URL(sources[i], document.location)
+      source: new URL(sources[i + 3], document.location)
     });
-    results['SQLite OPFS SAH'][i - 3] = result;
+    results['SQLite OPFS SAH'][i] = result;
   }
 }
 
@@ -68,8 +68,8 @@ async function runTests() {
 {#each Object.entries(results) as [name, [run1, run2, run3]]}
   <div>{name}</div>
   <div>{run1 === inProgress ? '⌛️' : run1 ? `${run1}ms` : '--'}</div>
-  <div>{run2 === inProgress ? '⌛️' : run2 ? `${run1}ms` : '--'}</div>
-  <div>{run3 === inProgress ? '⌛️' : run3 ? `${run1}ms` : '--'}</div>
+  <div>{run2 === inProgress ? '⌛️' : run2 ? `${run2}ms` : '--'}</div>
+  <div>{run3 === inProgress ? '⌛️' : run3 ? `${run3}ms` : '--'}</div>
 {/each}
 </div>
 
