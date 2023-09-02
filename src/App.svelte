@@ -23,9 +23,6 @@ async function runTests() {
     '/data/2.0.191-1.jsonl',
     '/data/2.0.191-2.jsonl',
     '/data/2.0.191-3.jsonl',
-    '/data/2.0.191-4.jsonl',
-    '/data/2.0.191-5.jsonl',
-    '/data/2.0.191-6.jsonl',
   ];
 
   for (let i = 0; i < 3; i++) {
@@ -41,7 +38,7 @@ async function runTests() {
     results['SQLite OPFS SAH'][i] = inProgress;
     const result = await runSqlite({
       batchSize: 2000,
-      source: new URL(sources[i + 3], document.location)
+      source: new URL(sources[i], document.location)
     });
     results['SQLite OPFS SAH'][i] = result;
   }
