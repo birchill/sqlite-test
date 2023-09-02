@@ -74,6 +74,14 @@ async function runTest(
 
     const dur = performance.now() - start;
 
+    // Check that things are actually stored as expected
+    const startSelect = performance.now();
+    const matches = db.selectArrays(
+      "select * from words, json_each(words.k) where json_each.value like '企業%'"
+    );
+    console.log(`Select took ${performance.now() - startSelect}ms`);
+    console.log(matches);
+
     // Tidy up
     db.exec(['drop table words']);
 
