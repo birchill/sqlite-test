@@ -99,22 +99,16 @@ async function writeRecords(
       sql: 'insert into words(id, k, km, r, rm, h, s) values(?, ?, ?, ?, ?, ?, ?)',
       bind: [
         record.id,
-        record.k ? `json(${JSON.stringify(record.k)})` : 'null',
+        record.k ? JSON.stringify(record.k) : null,
         record.km
-          ? `json(${JSON.stringify(
-              record.km.map((elem) => (elem === 0 ? null : elem))
-            )})`
-          : 'null',
-        `json(${JSON.stringify(record.r)})`,
+          ? JSON.stringify(record.km.map((elem) => (elem === 0 ? null : elem)))
+          : null,
+        JSON.stringify(record.r),
         record.rm
-          ? `json(${JSON.stringify(
-              record.rm.map((elem) => (elem === 0 ? null : elem))
-            )})`
-          : 'null',
-        `json(${JSON.stringify(
-          keysToHiragana([...(record.k || []), ...record.r])
-        )})`,
-        `json(${JSON.stringify(record.s)})`,
+          ? JSON.stringify(record.rm.map((elem) => (elem === 0 ? null : elem)))
+          : null,
+        JSON.stringify(keysToHiragana([...(record.k || []), ...record.r])),
+        JSON.stringify(record.s),
       ],
     });
   }

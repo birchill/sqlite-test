@@ -246,7 +246,7 @@ declare global {
 
   type ExecOptions = {
     sql?: string;
-    bind?: Array<string | number>;
+    bind?: Array<string | number | null>;
     saveSql?: Array<any>;
     returnValue?: 'this' | 'resultRows';
     callback?: (result: any, stmt: PreparedStatement) => void;
