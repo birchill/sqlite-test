@@ -203,7 +203,7 @@ declare global {
     selectObjects: Function;
 
     openStatementCount: Function;
-    transaction: Function;
+    transaction: (db: DB) => void;
     savepoint: Function;
     checkRc: Function;
   }
