@@ -203,7 +203,7 @@ declare global {
     selectObjects: Function;
 
     openStatementCount: Function;
-    transaction: (db: DB) => void;
+    transaction: (callback: (db: DB) => void) => void;
     savepoint: Function;
     checkRc: Function;
   }
@@ -246,7 +246,7 @@ declare global {
 
   type ExecOptions = {
     sql?: string;
-    bind?: Array<string | number | null>;
+    bind?: BindableValue;
     saveSql?: Array<any>;
     returnValue?: 'this' | 'resultRows';
     callback?: (result: any, stmt: PreparedStatement) => void;
@@ -261,10 +261,28 @@ declare global {
     returnValue: 'saveSql';
   };
 
+  type BindableType =
+    | null
+    | undefined
+    | number
+    | string
+    | Uint8Array
+    | Int8Array
+    | ArrayBuffer;
+
+  type ReadonlyRecord<K extends keyof any, T> = {
+    readonly [P in K]: T;
+  };
+
+  type BindableValue =
+    | BindableType
+    | ReadonlyArray<BindableType>
+    | ReadonlyRecord<string, BindableType>;
+
   type PreparedStatement = {
     db: DB;
-    bind(value: any): PreparedStatement;
-    bind(idx: number, value: any): PreparedStatement;
+    bind(value: BindableValue): PreparedStatement;
+    bind(idx: number, value: BindableValue): PreparedStatement;
     bindAsBlob(value: any): any;
     bindAsBlob(idx: number, value: any): any;
     get(ndx: number, asType?: any): any;

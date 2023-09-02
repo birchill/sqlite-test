@@ -81,11 +81,14 @@ async function writeRecords(
   records: Array<WordDownloadRecord>
 ): Promise<void> {
   db.transaction((tx) => {
+    const insertStmt = tx.prepare(
+      'insert into words(id, k, km, r, rm, h, s) values(?, ?, ?, ?, ?, ?, ?)'
+    );
+
     // TODO: Try batching inputs like so: 'insert into t(a) values(10),(20),(30)'
     for (const record of records) {
-      tx.exec({
-        sql: 'insert into words(id, k, km, r, rm, h, s) values(?, ?, ?, ?, ?, ?, ?)',
-        bind: [
+      insertStmt
+        .bind([
           record.id,
           record.k ? JSON.stringify(record.k) : null,
           record.km
@@ -101,9 +104,12 @@ async function writeRecords(
             : null,
           JSON.stringify(keysToHiragana([...(record.k || []), ...record.r])),
           JSON.stringify(record.s),
-        ],
-      });
+        ])
+        .stepReset()
+        .clearBindings();
     }
+
+    insertStmt.finalize();
   });
 }
 
