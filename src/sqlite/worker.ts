@@ -36,6 +36,8 @@ async function runTest(
 ): Promise<number> {
   const db = new poolUtil.OpfsSAHPoolDb('/sqlite-test');
   try {
+    db.exec('PRAGMA locking_mode=exclusive');
+
     // Drop any existing table
     db.exec(['drop table if exists words']);
 
