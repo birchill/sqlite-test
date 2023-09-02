@@ -48,21 +48,27 @@ async function runTest(
     // Get records and put them in the database
     console.log(`Fetching ${source}`);
 
+    const insertStmt = db.prepare(
+      'insert into words(id, k, km, r, rm, h, s) values(?, ?, ?, ?, ?, ?, ?)'
+    );
+
     for await (const record of getDownloadIterator({
       source: new URL(source),
     })) {
       records.push(record);
       if (records.length >= batchSize) {
-        await writeRecords(db, records);
+        await writeRecords(db, insertStmt, records);
         records = [];
       }
     }
 
     // Remaining records
     if (records.length) {
-      await writeRecords(db, records);
+      await writeRecords(db, insertStmt, records);
       records = [];
     }
+
+    insertStmt.finalize();
 
     const dur = performance.now() - start;
 
@@ -78,13 +84,10 @@ async function runTest(
 
 async function writeRecords(
   db: DB,
+  insertStmt: PreparedStatement,
   records: Array<WordDownloadRecord>
 ): Promise<void> {
-  db.transaction((tx) => {
-    const insertStmt = tx.prepare(
-      'insert into words(id, k, km, r, rm, h, s) values(?, ?, ?, ?, ?, ?, ?)'
-    );
-
+  db.transaction(() => {
     // TODO: Try batching inputs like so: 'insert into t(a) values(10),(20),(30)'
     for (const record of records) {
       insertStmt
@@ -108,8 +111,6 @@ async function writeRecords(
         .stepReset()
         .clearBindings();
     }
-
-    insertStmt.finalize();
   });
 }
 
