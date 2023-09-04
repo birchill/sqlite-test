@@ -28,16 +28,10 @@
       Object.keys(testConfigurations).map((key) => [key, Array(runs).fill(0)])
     );
 
-    const sources = [
-      '/data/2.0.191-1.jsonl',
-      '/data/2.0.191-2.jsonl',
-      '/data/2.0.191-3.jsonl',
-    ];
-
     for (const [name, test] of Object.entries(testConfigurations)) {
       for (let i = 0; i < runs; i++) {
         results[name]![i] = inProgress;
-        const result = await test(sources[i]!);
+        const result = await test('/data/2.0.191-10k.jsonl');
         results[name]![i] = result;
       }
     }
@@ -62,9 +56,9 @@
 
 <div class="results-table">
   <div>Configuration</div>
-  <div>Run #1</div>
-  <div>Run #2</div>
-  <div>Run #3</div>
+  {#each Array.from({ length: runs }, (_, i) => i + 1) as index}
+    <div>Run #{index}</div>
+  {/each}
   {#each Object.entries(results) as [name, runs]}
     <div>{name}</div>
     {#each runs as run}
