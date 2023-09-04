@@ -2,6 +2,8 @@
   import { runIdb } from './idb/run-idb';
   import { runSqlite } from './sqlite/run-sqlite';
 
+  import RunTime from './RunTime.svelte';
+
   const inProgress = Symbol('in progress');
   const runs = 3;
   const testConfigurations = {
@@ -20,19 +22,29 @@
   let running = false;
 
   let results = Object.fromEntries(
-    Object.keys(testConfigurations).map((key) => [key, Array(runs).fill(0)])
+    Object.keys(testConfigurations).map((key) => [key, Array(runs).fill(null)])
   );
 
   async function runTests() {
     results = Object.fromEntries(
-      Object.keys(testConfigurations).map((key) => [key, Array(runs).fill(0)])
+      Object.keys(testConfigurations).map((key) => [
+        key,
+        Array(runs).fill(null),
+      ])
     );
 
+    let baseline = null;
     for (const [name, test] of Object.entries(testConfigurations)) {
+      if (!baseline) {
+        baseline = name;
+      }
+
       for (let i = 0; i < runs; i++) {
         results[name]![i] = inProgress;
-        const result = await test('/data/2.0.191-10k.jsonl');
-        results[name]![i] = result;
+        const dur = await test('/data/2.0.191-10k.jsonl');
+        const diffMs = baseline === name ? 0 : dur - results[baseline]![i].dur;
+        const diffPercent = (diffMs / dur) * 100;
+        results[name]![i] = { dur, diffMs, diffPercent };
       }
     }
   }
@@ -55,14 +67,22 @@
 <p>Results:</p>
 
 <div class="results-table">
-  <div>Configuration</div>
+  <div class="heading">Configuration</div>
   {#each Array.from({ length: runs }, (_, i) => i + 1) as index}
-    <div>Run #{index}</div>
+    <div class="heading">Run #{index}</div>
   {/each}
   {#each Object.entries(results) as [name, runs]}
     <div>{name}</div>
     {#each runs as run}
-      <div>{run === inProgress ? '⌛️' : run ? `${run}ms` : '--'}</div>
+      <div>
+        {#if run === inProgress}
+          ⌛️
+        {:else if run}
+          <RunTime {...run} />
+        {:else}
+          --
+        {/if}
+      </div>
     {/each}
   {/each}
 </div>
@@ -72,5 +92,9 @@
     display: inline-grid;
     grid-template-columns: auto repeat(3, 1fr);
     gap: 0.5rem 2rem;
+  }
+
+  .results-table .heading {
+    font-weight: bold;
   }
 </style>
