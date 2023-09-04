@@ -2,45 +2,44 @@
   import { runIdb } from './idb/run-idb';
   import { runSqlite } from './sqlite/run-sqlite';
 
-  let running = false;
-
   const inProgress = Symbol('in progress');
-  type Result = number | typeof inProgress;
-  type Configuration = 'IndexedDB' | 'SQLite OPFS SAH';
-
-  let results: Record<Configuration, [Result, Result, Result]> = {
-    IndexedDB: [0, 0, 0],
-    'SQLite OPFS SAH': [0, 0, 0],
+  const runs = 3;
+  const testConfigurations = {
+    IndexedDB: (source: string) =>
+      runIdb({
+        batchSize: 2000,
+        source: new URL(source, document.location.toString()),
+      }),
+    'SQLite OPFS SAH': (source: string) =>
+      runSqlite({
+        batchSize: 2000,
+        source: new URL(source, document.location.toString()),
+      }),
   };
 
-  const sources = [
-    '/data/2.0.191-1.jsonl',
-    '/data/2.0.191-2.jsonl',
-    '/data/2.0.191-3.jsonl',
-  ];
+  let running = false;
+
+  let results = Object.fromEntries(
+    Object.keys(testConfigurations).map((key) => [key, Array(runs).fill(0)])
+  );
 
   async function runTests() {
-    results = {
-      IndexedDB: [0, 0, 0],
-      'SQLite OPFS SAH': [0, 0, 0],
-    };
+    results = Object.fromEntries(
+      Object.keys(testConfigurations).map((key) => [key, Array(runs).fill(0)])
+    );
 
-    for (let i = 0; i < 3; i++) {
-      results['IndexedDB'][i] = inProgress;
-      const result = await runIdb({
-        batchSize: 2000,
-        source: new URL(sources[i]!, document.location.toString()),
-      });
-      results['IndexedDB'][i] = result;
-    }
+    const sources = [
+      '/data/2.0.191-1.jsonl',
+      '/data/2.0.191-2.jsonl',
+      '/data/2.0.191-3.jsonl',
+    ];
 
-    for (let i = 0; i < 3; i++) {
-      results['SQLite OPFS SAH'][i] = inProgress;
-      const result = await runSqlite({
-        batchSize: 2000,
-        source: new URL(sources[i]!, document.location.toString()),
-      });
-      results['SQLite OPFS SAH'][i] = result;
+    for (const [name, test] of Object.entries(testConfigurations)) {
+      for (let i = 0; i < runs; i++) {
+        results[name]![i] = inProgress;
+        const result = await test(sources[i]!);
+        results[name]![i] = result;
+      }
     }
   }
 </script>
@@ -66,11 +65,11 @@
   <div>Run #1</div>
   <div>Run #2</div>
   <div>Run #3</div>
-  {#each Object.entries(results) as [name, [run1, run2, run3]]}
+  {#each Object.entries(results) as [name, runs]}
     <div>{name}</div>
-    <div>{run1 === inProgress ? '⌛️' : run1 ? `${run1}ms` : '--'}</div>
-    <div>{run2 === inProgress ? '⌛️' : run2 ? `${run2}ms` : '--'}</div>
-    <div>{run3 === inProgress ? '⌛️' : run3 ? `${run3}ms` : '--'}</div>
+    {#each runs as run}
+      <div>{run === inProgress ? '⌛️' : run ? `${run}ms` : '--'}</div>
+    {/each}
   {/each}
 </div>
 
@@ -81,4 +80,3 @@
     gap: 0.5rem 2rem;
   }
 </style>
-
