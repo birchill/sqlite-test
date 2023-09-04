@@ -22,14 +22,17 @@
   let running = false;
 
   let results = Object.fromEntries(
-    Object.keys(testConfigurations).map((key) => [key, Array(runs).fill(null)])
+    Object.keys(testConfigurations).map((key) => [
+      key,
+      Array(runs + 1).fill(null),
+    ])
   );
 
   async function runTests() {
     results = Object.fromEntries(
       Object.keys(testConfigurations).map((key) => [
         key,
-        Array(runs).fill(null),
+        Array(runs + 1).fill(null),
       ])
     );
 
@@ -46,6 +49,14 @@
         const diffPercent = (diffMs / dur) * 100;
         results[name]![i] = { dur, diffMs, diffPercent };
       }
+
+      const average =
+        results[name]!.slice(0, runs).reduce((acc, { dur }) => acc + dur, 0) /
+        runs;
+      const diffMs =
+        baseline === name ? 0 : average - results[baseline]![runs].dur;
+      const diffPercent = (diffMs / average) * 100;
+      results[name]![runs] = { dur: average, diffMs, diffPercent };
     }
   }
 </script>
@@ -71,6 +82,7 @@
   {#each Array.from({ length: runs }, (_, i) => i + 1) as index}
     <div class="heading">Run #{index}</div>
   {/each}
+  <div class="heading">Average</div>
   {#each Object.entries(results) as [name, runs]}
     <div>{name}</div>
     {#each runs as run}
@@ -90,7 +102,7 @@
 <style>
   .results-table {
     display: inline-grid;
-    grid-template-columns: auto repeat(3, 1fr);
+    grid-template-columns: auto repeat(4, 1fr);
     gap: 0.5rem 2rem;
   }
 

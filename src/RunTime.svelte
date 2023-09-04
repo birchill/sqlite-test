@@ -9,14 +9,14 @@
   }
 </script>
 
-<div>{dur.toLocaleString()}ms</div>
+<div>{round(dur, 2).toLocaleString()}ms</div>
 {#if diffMs > 0}
   <div class="slower">
-    +{diffMs.toLocaleString()}ms (+{round(diffPercent, 2)}%)
+    +{round(diffMs, 2).toLocaleString()}ms (+{round(diffPercent, 2)}%)
   </div>
 {:else if diffMs < 0}
   <div class="faster">
-    {diffMs.toLocaleString()}ms ({round(diffPercent, 2)}%)
+    {round(diffMs, 2).toLocaleString()}ms ({round(diffPercent, 2)}%)
   </div>
 {/if}
 
