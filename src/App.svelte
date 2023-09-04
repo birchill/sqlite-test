@@ -5,7 +5,7 @@
   import RunTime from './RunTime.svelte';
 
   const inProgress = Symbol('in progress');
-  const runs = 3;
+  const runs = 5;
   const testConfigurations = {
     IndexedDB: (source: string) =>
       runIdb({
@@ -22,6 +22,13 @@
         batchSize: 2000,
         separateIndex: true,
         source: new URL(source, document.location.toString()),
+      }),
+    'SQLite OPFS SAH (separate index + triggers)': (source: string) =>
+      runSqlite({
+        batchSize: 2000,
+        separateIndex: true,
+        source: new URL(source, document.location.toString()),
+        useTriggers: true,
       }),
   };
 
@@ -50,7 +57,7 @@
 
       for (let i = 0; i < runs; i++) {
         results[name]![i] = inProgress;
-        const result = await test('/data/2.0.191-30k.jsonl');
+        const result = await test('/data/2.0.191-10k.jsonl');
 
         const insert = { dur: result.insertDur, diffMs: 0, diffPercent: 0 };
         if (name !== baseline) {

@@ -4,10 +4,12 @@ export async function runSqlite({
   batchSize,
   separateIndex,
   source,
+  useTriggers,
 }: {
   batchSize: number;
   separateIndex?: boolean;
   source: URL;
+  useTriggers?: boolean;
 }): Promise<{ insertDur: number; queryDur: number }> {
   // Create worker and wait for it to be ready
   const worker = await getWorker();
@@ -57,6 +59,7 @@ export async function runSqlite({
       type: 'start',
       batchSize,
       separateIndex,
+      useTriggers,
       source: source.toString(),
     });
   });

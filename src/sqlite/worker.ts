@@ -24,8 +24,14 @@ import './sqlite3.js';
     const source = e.data.source as string;
     const batchSize = e.data.batchSize as number;
     const separateIndex = !!e.data.separateIndex;
+    const useTriggers = !!e.data.useTriggers;
 
-    const testFn = separateIndex ? runTestWithSeparateIndex : runTest;
+    const testFn = separateIndex
+      ? useTriggers
+        ? (poolUtil: OpfsSAHPoolUtil, source: string, batchSize: number) =>
+            runTestWithSeparateIndex(poolUtil, source, batchSize, true)
+        : runTestWithSeparateIndex
+      : runTest;
 
     testFn(poolUtil, source, batchSize).then((results) => {
       postMessage({ type: 'result', ...results });
@@ -133,7 +139,8 @@ async function writeRecords(
 async function runTestWithSeparateIndex(
   poolUtil: OpfsSAHPoolUtil,
   source: string,
-  batchSize: number
+  batchSize: number,
+  useTriggers?: boolean
 ): Promise<{ insertDur: number; queryDur: number }> {
   const db = new poolUtil.OpfsSAHPoolDb('/sqlite-test');
   try {
@@ -145,19 +152,28 @@ async function runTestWithSeparateIndex(
 
     // Create the table
     db.exec([
-      'create table words(id INT PRIMARY KEY, json JSON);',
-      'create table readings(r TEXT, id REFERENCES words(id), PRIMARY KEY(r, id)) WITHOUT ROWID;',
-      'CREATE INDEX readings_r ON readings(r)',
+      'create table words(id INT PRIMARY KEY NOT NULL, json JSON NOT NULL);',
+      'create table readings(id INT NOT NULL, r TEXT NOT NULL, PRIMARY KEY(id, r), FOREIGN KEY(id) REFERENCES words(id)) WITHOUT ROWID',
     ]);
+
+    if (useTriggers) {
+      console.log('Using triggers');
+      db.exec([
+        'CREATE TRIGGER words_add AFTER INSERT ON words BEGIN ',
+        "INSERT INTO readings(id, r) select new.id, j.value from json_each(new.json, '$.r') as j;",
+        "INSERT INTO readings(id, r) select new.id, j.value from json_each(new.json, '$.k') as j;",
+        'END',
+      ]);
+    }
 
     const start = performance.now();
     let records: Array<WordDownloadRecord> = [];
 
     // Get records and put them in the database
     const insertStmt = db.prepare('insert into words(id, json) values(?, ?)');
-    const insertReadingsStmt = db.prepare(
-      'insert into readings(r, id) values(?, ?)'
-    );
+    const insertReadingsStmt = useTriggers
+      ? null
+      : db.prepare('insert into readings(r, id) values(?, ?)');
 
     for await (const record of getDownloadIterator({
       source: new URL(source),
@@ -214,7 +230,7 @@ async function writeRecordsWithSeparateIndex({
 }: {
   db: DB;
   insertStmt: PreparedStatement;
-  insertReadingsStmt: PreparedStatement;
+  insertReadingsStmt: PreparedStatement | null;
   records: Array<WordDownloadRecord>;
 }): Promise<void> {
   db.transaction(() => {
@@ -225,12 +241,14 @@ async function writeRecordsWithSeparateIndex({
         .stepReset()
         .clearBindings();
 
-      const readings = [...new Set([...(record.k || []), ...record.r])];
-      for (const reading of readings) {
-        insertReadingsStmt
-          .bind([reading, record.id])
-          .stepReset()
-          .clearBindings();
+      if (insertReadingsStmt) {
+        const readings = [...new Set([...(record.k || []), ...record.r])];
+        for (const reading of readings) {
+          insertReadingsStmt
+            .bind([reading, record.id])
+            .stepReset()
+            .clearBindings();
+        }
       }
     }
   });
