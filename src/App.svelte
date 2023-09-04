@@ -77,7 +77,10 @@
 
 <p>Results:</p>
 
-<div class="results-table">
+<div
+  class="results-table"
+  style={`grid-template-columns: auto repeat(${runs + 0}, 1fr) auto;`}
+>
   <div class="heading">Configuration</div>
   {#each Array.from({ length: runs }, (_, i) => i + 1) as index}
     <div class="heading">Run #{index}</div>
@@ -102,7 +105,6 @@
 <style>
   .results-table {
     display: inline-grid;
-    grid-template-columns: auto repeat(4, 1fr);
     gap: 0.5rem 2rem;
   }
 
