@@ -2,9 +2,11 @@ import { isObject } from '../utils/is-object';
 
 export async function runSqlite({
   batchSize,
+  separateIndex,
   source,
 }: {
   batchSize: number;
+  separateIndex?: boolean;
   source: URL;
 }): Promise<{ insertDur: number; queryDur: number }> {
   // Create worker and wait for it to be ready
@@ -51,7 +53,12 @@ export async function runSqlite({
     worker.addEventListener('messageerror', onError);
     worker.addEventListener('unhandledrejection', onError);
 
-    worker.postMessage({ type: 'start', batchSize, source: source.toString() });
+    worker.postMessage({
+      type: 'start',
+      batchSize,
+      separateIndex,
+      source: source.toString(),
+    });
   });
 }
 

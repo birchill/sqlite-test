@@ -17,6 +17,12 @@
         batchSize: 2000,
         source: new URL(source, document.location.toString()),
       }),
+    'SQLite OPFS SAH (separate index)': (source: string) =>
+      runSqlite({
+        batchSize: 2000,
+        separateIndex: true,
+        source: new URL(source, document.location.toString()),
+      }),
   };
 
   let running = false;
@@ -44,18 +50,20 @@
 
       for (let i = 0; i < runs; i++) {
         results[name]![i] = inProgress;
-        const result = await test('/data/2.0.191-10k.jsonl');
+        const result = await test('/data/2.0.191-30k.jsonl');
 
         const insert = { dur: result.insertDur, diffMs: 0, diffPercent: 0 };
         if (name !== baseline) {
-          insert.diffMs = insert.dur - results[baseline]![i].insert.dur;
-          insert.diffPercent = (insert.diffMs / insert.dur) * 100;
+          const baselineDur = results[baseline]![i].insert.dur;
+          insert.diffMs = insert.dur - baselineDur;
+          insert.diffPercent = (insert.diffMs / baselineDur) * 100;
         }
 
         const query = { dur: result.queryDur, diffMs: 0, diffPercent: 0 };
         if (name !== baseline) {
-          query.diffMs = query.dur - results[baseline]![i].query.dur;
-          query.diffPercent = (query.diffMs / query.dur) * 100;
+          const baselineDur = results[baseline]![i].query.dur;
+          query.diffMs = query.dur - baselineDur;
+          query.diffPercent = (query.diffMs / baselineDur) * 100;
         }
 
         results[name]![i] = { insert, query };
@@ -69,8 +77,9 @@
       const insert = { dur: averageInsertDur, diffMs: 0, diffPercent: 0 };
 
       if (name !== baseline) {
-        insert.diffMs = insert.dur - results[baseline]![runs].insert.dur;
-        insert.diffPercent = (insert.diffMs / insert.dur) * 100;
+        const baselineDur = results[baseline]![runs].insert.dur;
+        insert.diffMs = insert.dur - baselineDur;
+        insert.diffPercent = (insert.diffMs / baselineDur) * 100;
       }
 
       const averageQueryDur =
@@ -81,8 +90,9 @@
       const query = { dur: averageQueryDur, diffMs: 0, diffPercent: 0 };
 
       if (name !== baseline) {
-        query.diffMs = query.dur - results[baseline]![runs].query.dur;
-        query.diffPercent = (query.diffMs / query.dur) * 100;
+        const baselineDur = results[baseline]![runs].query.dur;
+        query.diffMs = query.dur - baselineDur;
+        query.diffPercent = (query.diffMs / baselineDur) * 100;
       }
 
       results[name]![runs] = { insert, query };

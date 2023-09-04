@@ -23,8 +23,11 @@ import './sqlite3.js';
 
     const source = e.data.source as string;
     const batchSize = e.data.batchSize as number;
+    const separateIndex = !!e.data.separateIndex;
 
-    runTest(poolUtil, source, batchSize).then((results) => {
+    const testFn = separateIndex ? runTestWithSeparateIndex : runTest;
+
+    testFn(poolUtil, source, batchSize).then((results) => {
       postMessage({ type: 'result', ...results });
     });
   });
@@ -123,6 +126,112 @@ async function writeRecords(
         ])
         .stepReset()
         .clearBindings();
+    }
+  });
+}
+
+async function runTestWithSeparateIndex(
+  poolUtil: OpfsSAHPoolUtil,
+  source: string,
+  batchSize: number
+): Promise<{ insertDur: number; queryDur: number }> {
+  const db = new poolUtil.OpfsSAHPoolDb('/sqlite-test');
+  try {
+    db.exec('PRAGMA locking_mode = exclusive');
+    db.exec('PRAGMA foreign_keys = ON');
+
+    // Drop any existing table
+    db.exec(['drop table if exists readings;', 'drop table if exists words']);
+
+    // Create the table
+    db.exec([
+      'create table words(id INT PRIMARY KEY, json JSON);',
+      'create table readings(r TEXT, id REFERENCES words(id), PRIMARY KEY(r, id)) WITHOUT ROWID;',
+      'CREATE INDEX readings_r ON readings(r)',
+    ]);
+
+    const start = performance.now();
+    let records: Array<WordDownloadRecord> = [];
+
+    // Get records and put them in the database
+    const insertStmt = db.prepare('insert into words(id, json) values(?, ?)');
+    const insertReadingsStmt = db.prepare(
+      'insert into readings(r, id) values(?, ?)'
+    );
+
+    for await (const record of getDownloadIterator({
+      source: new URL(source),
+    })) {
+      records.push(record);
+      if (records.length >= batchSize) {
+        await writeRecordsWithSeparateIndex({
+          db,
+          insertStmt,
+          insertReadingsStmt,
+          records,
+        });
+        records = [];
+      }
+    }
+
+    // Remaining records
+    if (records.length) {
+      await writeRecordsWithSeparateIndex({
+        db,
+        insertStmt,
+        insertReadingsStmt,
+        records,
+      });
+      records = [];
+    }
+
+    insertStmt.finalize();
+
+    const insertDur = performance.now() - start;
+
+    // Measure query performance
+    const queryStart = performance.now();
+    db.selectArrays(
+      "select words.json from readings join words on readings.id = words.id where readings.r like '企業%'"
+    );
+    const queryDur = performance.now() - queryStart;
+
+    // Tidy up
+    db.exec(['drop table readings;', 'drop table words']);
+
+    return { insertDur, queryDur };
+  } finally {
+    db.close();
+    await poolUtil.wipeFiles();
+  }
+}
+
+async function writeRecordsWithSeparateIndex({
+  db,
+  insertStmt,
+  insertReadingsStmt,
+  records,
+}: {
+  db: DB;
+  insertStmt: PreparedStatement;
+  insertReadingsStmt: PreparedStatement;
+  records: Array<WordDownloadRecord>;
+}): Promise<void> {
+  db.transaction(() => {
+    // TODO: Try batching inputs like so: 'insert into t(a) values(10),(20),(30)'
+    for (const record of records) {
+      insertStmt
+        .bind([record.id, JSON.stringify(record)])
+        .stepReset()
+        .clearBindings();
+
+      const readings = [...new Set([...(record.k || []), ...record.r])];
+      for (const reading of readings) {
+        insertReadingsStmt
+          .bind([reading, record.id])
+          .stepReset()
+          .clearBindings();
+      }
     }
   });
 }
