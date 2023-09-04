@@ -1,13 +1,13 @@
 import { kanaToHiragana } from '@birchill/normal-jp';
 import {
-  DBSchema,
+  type DBSchema,
   type IDBPDatabase,
   deleteDB,
   openDB,
 } from 'idb/with-async-ittr';
 
-import { KanjiMeta, ReadingMeta } from '../common/types';
-import { Overwrite } from '../utils/type-helpers';
+import type { KanjiMeta, ReadingMeta } from '../common/types';
+import type { Overwrite } from '../utils/type-helpers';
 import {
   getDownloadIterator,
   type WordDownloadRecord,
@@ -55,7 +55,7 @@ export async function runIdb({
 }: {
   batchSize: number;
   source: URL;
-}): Promise<number> {
+}): Promise<{ insertDur: number; queryDur: number }> {
   // Drop any existing database
   await deleteDB(DATABASE_NAME).catch(() => {});
 
@@ -92,7 +92,6 @@ export async function runIdb({
   let records: Array<WordDownloadRecord> = [];
 
   // Get records and put them in the database
-  console.log(`Fetching ${source}`);
   for await (const record of getDownloadIterator({ source })) {
     records.push(record);
     if (records.length >= batchSize) {
@@ -107,13 +106,33 @@ export async function runIdb({
     records = [];
   }
 
+  const insertDur = performance.now() - start;
+
+  // Measure query performance
+  const queryStart = performance.now();
+
+  // Try the k (kanji) index first
+  const kanjiIndex = db!.transaction(TABLE_NAME).store.index('k');
+  const key = IDBKeyRange.bound('企業', '企業\uFFFF');
+  const queryResult = [];
+  for await (const cursor of kanjiIndex.iterate(key)) {
+    queryResult.push(cursor.value);
+  }
+
+  // Then the r (reading) index
+  const readingIndex = db!.transaction(TABLE_NAME).store.index('r');
+  for await (const cursor of readingIndex.iterate(key)) {
+    queryResult.push(cursor.value);
+  }
+
+  const queryDur = performance.now() - queryStart;
+
   db.close();
-  const dur = performance.now() - start;
 
   // Drop the database
   await deleteDB(DATABASE_NAME).catch(() => {});
 
-  return dur;
+  return { insertDur, queryDur };
 }
 
 async function writeRecords(

@@ -68,6 +68,11 @@ const config = {
   },
   devtool: prod ? 'hidden-source-map' : 'eval-source-map',
   devServer: {
+    headers: {
+      // This is needed to get high-performance timing
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
     hot: true,
     historyApiFallback: true,
   },

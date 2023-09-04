@@ -1,6 +1,9 @@
 /// <reference path="./sqlite3.d.ts"/>
 import { kanaToHiragana } from '@birchill/normal-jp';
-import { WordDownloadRecord, getDownloadIterator } from '../common/download';
+import {
+  type WordDownloadRecord,
+  getDownloadIterator,
+} from '../common/download';
 import { isObject } from '../utils/is-object';
 
 import './sqlite3.js';
@@ -21,8 +24,8 @@ import './sqlite3.js';
     const source = e.data.source as string;
     const batchSize = e.data.batchSize as number;
 
-    runTest(poolUtil, source, batchSize).then((dur) => {
-      postMessage({ type: 'result', dur });
+    runTest(poolUtil, source, batchSize).then((results) => {
+      postMessage({ type: 'result', ...results });
     });
   });
 
@@ -33,7 +36,7 @@ async function runTest(
   poolUtil: OpfsSAHPoolUtil,
   source: string,
   batchSize: number
-): Promise<number> {
+): Promise<{ insertDur: number; queryDur: number }> {
   const db = new poolUtil.OpfsSAHPoolDb('/sqlite-test');
   try {
     db.exec('PRAGMA locking_mode=exclusive');
@@ -48,8 +51,6 @@ async function runTest(
     let records: Array<WordDownloadRecord> = [];
 
     // Get records and put them in the database
-    console.log(`Fetching ${source}`);
-
     const insertStmt = db.prepare(
       'insert into words(id, k, km, r, rm, h, s) values(?, ?, ?, ?, ?, ?, ?)'
     );
@@ -72,20 +73,22 @@ async function runTest(
 
     insertStmt.finalize();
 
-    const dur = performance.now() - start;
+    const insertDur = performance.now() - start;
 
-    // Check that things are actually stored as expected
-    const startSelect = performance.now();
-    const matches = db.selectArrays(
+    // Measure query performance
+    const queryStart = performance.now();
+    db.selectArrays(
       "select * from words, json_each(words.k) where json_each.value like '企業%'"
     );
-    console.log(`Select took ${performance.now() - startSelect}ms`);
-    console.log(matches);
+    db.selectArrays(
+      "select * from words, json_each(words.r) where json_each.value like '企業%'"
+    );
+    const queryDur = performance.now() - queryStart;
 
     // Tidy up
     db.exec(['drop table words']);
 
-    return dur;
+    return { insertDur, queryDur };
   } finally {
     db.close();
     await poolUtil.wipeFiles();

@@ -44,19 +44,48 @@
 
       for (let i = 0; i < runs; i++) {
         results[name]![i] = inProgress;
-        const dur = await test('/data/2.0.191-10k.jsonl');
-        const diffMs = baseline === name ? 0 : dur - results[baseline]![i].dur;
-        const diffPercent = (diffMs / dur) * 100;
-        results[name]![i] = { dur, diffMs, diffPercent };
+        const result = await test('/data/2.0.191-10k.jsonl');
+
+        const insert = { dur: result.insertDur, diffMs: 0, diffPercent: 0 };
+        if (name !== baseline) {
+          insert.diffMs = insert.dur - results[baseline]![i].insert.dur;
+          insert.diffPercent = (insert.diffMs / insert.dur) * 100;
+        }
+
+        const query = { dur: result.queryDur, diffMs: 0, diffPercent: 0 };
+        if (name !== baseline) {
+          query.diffMs = query.dur - results[baseline]![i].query.dur;
+          query.diffPercent = (query.diffMs / query.dur) * 100;
+        }
+
+        results[name]![i] = { insert, query };
       }
 
-      const average =
-        results[name]!.slice(0, runs).reduce((acc, { dur }) => acc + dur, 0) /
-        runs;
-      const diffMs =
-        baseline === name ? 0 : average - results[baseline]![runs].dur;
-      const diffPercent = (diffMs / average) * 100;
-      results[name]![runs] = { dur: average, diffMs, diffPercent };
+      const averageInsertDur =
+        results[name]!.slice(0, runs).reduce(
+          (acc, { insert: { dur } }) => acc + dur,
+          0
+        ) / runs;
+      const insert = { dur: averageInsertDur, diffMs: 0, diffPercent: 0 };
+
+      if (name !== baseline) {
+        insert.diffMs = insert.dur - results[baseline]![runs].insert.dur;
+        insert.diffPercent = (insert.diffMs / insert.dur) * 100;
+      }
+
+      const averageQueryDur =
+        results[name]!.slice(0, runs).reduce(
+          (acc, { query: { dur } }) => acc + dur,
+          0
+        ) / runs;
+      const query = { dur: averageQueryDur, diffMs: 0, diffPercent: 0 };
+
+      if (name !== baseline) {
+        query.diffMs = query.dur - results[baseline]![runs].query.dur;
+        query.diffPercent = (query.diffMs / query.dur) * 100;
+      }
+
+      results[name]![runs] = { insert, query };
     }
   }
 </script>
@@ -93,7 +122,12 @@
         {#if run === inProgress}
           ⌛️
         {:else if run}
-          <RunTime {...run} />
+          <div class="result-section">
+            <span class="label">Insert:</span>
+            <RunTime {...run.insert} />
+            <span class="label">Query:</span>
+            <RunTime {...run.query} />
+          </div>
         {:else}
           --
         {/if}

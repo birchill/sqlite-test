@@ -6,7 +6,7 @@ export async function runSqlite({
 }: {
   batchSize: number;
   source: URL;
-}): Promise<number> {
+}): Promise<{ insertDur: number; queryDur: number }> {
   // Create worker and wait for it to be ready
   const worker = await getWorker();
 
@@ -27,13 +27,16 @@ export async function runSqlite({
         reject(new Error(`Got unexpected message: ${JSON.stringify(m)}`));
       }
 
-      if (typeof m.data.dur !== 'number') {
+      if (
+        typeof m.data.insertDur !== 'number' ||
+        typeof m.data.queryDur !== 'number'
+      ) {
         unregister();
         reject(new Error(`Got unexpected message: ${JSON.stringify(m)}`));
       }
 
       unregister();
-      resolve(m.data.dur);
+      resolve({ insertDur: m.data.insertDur, queryDur: m.data.queryDur });
     }
 
     function unregister() {
