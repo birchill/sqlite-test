@@ -51,26 +51,32 @@ async function runTest(
     const start = performance.now();
     let records: Array<WordDownloadRecord> = [];
 
-    // Get records and put them in the database
-    // XXX Prepare statements
+    // Prepare insert statements
+    const str = sqlite3.str_new(db, 'insert into words(id, json) values(?, ?)');
+    let prepared = await sqlite3.prepare_v2(db, sqlite3.str_value(str));
+    if (!prepared?.stmt) {
+      throw new Error('Failed to prepare statement');
+    }
 
+    // Get records and put them in the database
     for await (const record of getDownloadIterator({
       source: new URL(source),
     })) {
       records.push(record);
       if (records.length >= batchSize) {
-        await writeRecords(sqlite3, db, records);
+        await writeRecords(sqlite3, db, prepared.stmt, records);
         records = [];
       }
     }
 
     // Remaining records
     if (records.length) {
-      await writeRecords(sqlite3, db, records);
+      await writeRecords(sqlite3, db, prepared.stmt, records);
       records = [];
     }
 
-    // insertStmt.finalize();
+    sqlite3.finalize(prepared.stmt);
+    sqlite3.str_finish(str);
 
     const insertDur = performance.now() - start;
 
@@ -99,20 +105,16 @@ async function runTest(
 async function writeRecords(
   sqlite3: SQLiteAPI,
   db: number,
+  insertStmt: number,
   records: Array<WordDownloadRecord>
 ): Promise<void> {
   await sqlite3.exec(db, 'begin transaction');
   try {
     // TODO: Hiragana index for comparison
     for (const record of records) {
-      await sqlite3.exec(
-        db,
-        `insert into words(id, json) values(${record.id}, '${JSON.stringify(
-          record
-        )
-          .replace(/"/g, '""')
-          .replace(/'/g, "''")}')`
-      );
+      sqlite3.bind_int(insertStmt, 1, record.id);
+      sqlite3.bind_text(insertStmt, 2, JSON.stringify(record));
+      await sqlite3.step(insertStmt);
     }
 
     await sqlite3.exec(db, 'commit');
