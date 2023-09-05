@@ -58,6 +58,9 @@ const config = {
         {
           from: 'src/sqlite/sqlite3.wasm',
         },
+        {
+          from: 'src/wa-sqlite/wa-sqlite.wasm',
+        },
       ],
     },
     html: [

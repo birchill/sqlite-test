@@ -1,6 +1,7 @@
 <script lang="ts">
   import { runIdb } from './idb/run-idb';
   import { runSqlite } from './sqlite/run-sqlite';
+  import { runWaSqlite } from './wa-sqlite/run-wa-sqlite';
 
   import RunTime from './RunTime.svelte';
 
@@ -29,6 +30,11 @@
         separateIndex: true,
         source: new URL(source, document.location.toString()),
         useTriggers: true,
+      }),
+    'wa-sqlite': (source: string) =>
+      runWaSqlite({
+        batchSize: 2000,
+        source: new URL(source, document.location.toString()),
       }),
   };
 
