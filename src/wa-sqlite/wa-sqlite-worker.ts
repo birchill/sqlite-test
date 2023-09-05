@@ -42,11 +42,19 @@ async function runTest(
   try {
     // db.exec('PRAGMA locking_mode=exclusive');
 
-    // Drop any existing table
+    // Drop any existing tables
+    await sqlite3.exec(db, 'drop table if exists readings');
     await sqlite3.exec(db, 'drop table if exists words');
 
-    // Create the table
-    await sqlite3.exec(db, 'create table words(id INT PRIMARY KEY, json JSON)');
+    // Create the tables
+    await sqlite3.exec(
+      db,
+      'create table words(id INT PRIMARY KEY NOT NULL, json JSON NOT NULL)'
+    );
+    await sqlite3.exec(
+      db,
+      'create table readings(id INT NOT NULL, r TEXT NOT NULL, PRIMARY KEY(id, r), FOREIGN KEY(id) REFERENCES words(id)) WITHOUT ROWID'
+    );
 
     const start = performance.now();
     let records: Array<WordDownloadRecord> = [];
@@ -55,7 +63,19 @@ async function runTest(
     const str = sqlite3.str_new(db, 'insert into words(id, json) values(?, ?)');
     let prepared = await sqlite3.prepare_v2(db, sqlite3.str_value(str));
     if (!prepared?.stmt) {
-      throw new Error('Failed to prepare statement');
+      throw new Error('Failed to prepare insert statement');
+    }
+
+    const readingsStr = sqlite3.str_new(
+      db,
+      'insert into readings(id, r) values(?, ?)'
+    );
+    let preparedReadings = await sqlite3.prepare_v2(
+      db,
+      sqlite3.str_value(readingsStr)
+    );
+    if (!preparedReadings?.stmt) {
+      throw new Error('Failed to prepare readings statement');
     }
 
     // Get records and put them in the database
@@ -64,16 +84,31 @@ async function runTest(
     })) {
       records.push(record);
       if (records.length >= batchSize) {
-        await writeRecords(sqlite3, db, prepared.stmt, records);
+        await writeRecords(
+          sqlite3,
+          db,
+          prepared.stmt,
+          preparedReadings.stmt,
+          records
+        );
         records = [];
       }
     }
 
     // Remaining records
     if (records.length) {
-      await writeRecords(sqlite3, db, prepared.stmt, records);
+      await writeRecords(
+        sqlite3,
+        db,
+        prepared.stmt,
+        preparedReadings.stmt,
+        records
+      );
       records = [];
     }
+
+    sqlite3.finalize(preparedReadings.stmt);
+    sqlite3.str_finish(readingsStr);
 
     sqlite3.finalize(prepared.stmt);
     sqlite3.str_finish(str);
@@ -81,19 +116,15 @@ async function runTest(
     const insertDur = performance.now() - start;
 
     // Measure query performance
-    /*
     const queryStart = performance.now();
-    db.selectArrays(
-      "select * from words, json_each(words.k) where json_each.value like '企業%'"
-    );
-    db.selectArrays(
-      "select * from words, json_each(words.r) where json_each.value like '企業%'"
+    await sqlite3.exec(
+      db,
+      "select words.json from readings join words on readings.id = words.id where readings.r like '企業%'"
     );
     const queryDur = performance.now() - queryStart;
-    */
-    const queryDur = 170;
 
     // Tidy up
+    await sqlite3.exec(db, 'drop table readings');
     await sqlite3.exec(db, 'drop table words');
 
     return { insertDur, queryDur };
@@ -106,6 +137,7 @@ async function writeRecords(
   sqlite3: SQLiteAPI,
   db: number,
   insertStmt: number,
+  insertReadingsStmt: number,
   records: Array<WordDownloadRecord>
 ): Promise<void> {
   await sqlite3.exec(db, 'begin transaction');
@@ -115,6 +147,13 @@ async function writeRecords(
       sqlite3.bind_int(insertStmt, 1, record.id);
       sqlite3.bind_text(insertStmt, 2, JSON.stringify(record));
       await sqlite3.step(insertStmt);
+
+      const readings = [...new Set([...(record.k || []), ...record.r])];
+      for (const reading of readings) {
+        sqlite3.bind_int(insertReadingsStmt, 1, record.id);
+        sqlite3.bind_text(insertReadingsStmt, 2, reading);
+        await sqlite3.step(insertReadingsStmt);
+      }
     }
 
     await sqlite3.exec(db, 'commit');

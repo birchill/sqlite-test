@@ -157,7 +157,6 @@ async function runTestWithSeparateIndex(
     ]);
 
     if (useTriggers) {
-      console.log('Using triggers');
       db.exec([
         'CREATE TRIGGER words_add AFTER INSERT ON words BEGIN ',
         "INSERT INTO readings(id, r) select new.id, j.value from json_each(new.json, '$.r') as j;",
