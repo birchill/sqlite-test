@@ -331,7 +331,7 @@ declare global {
     sqlite3_wasmfs_filename_is_persistent: any;
     sqlite3_js_db_uses_vfs: any;
     sqlite3_js_vfs_list: any;
-    sqlite3_js_db_export: any;
+    sqlite3_js_db_export: (dbPointer: number) => Uint8Array;
     sqlite3_js_db_vfs: any;
     sqlite3_js_aggregate_context: any;
     sqlite3_js_vfs_create_file: any;

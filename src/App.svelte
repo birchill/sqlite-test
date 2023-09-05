@@ -13,23 +13,29 @@
         batchSize: 2000,
         source: new URL(source, document.location.toString()),
       }),
-    'SQLite OPFS SAH': (source: string) =>
+    'SQLite OPFS SAH': (source: string, saveFile?: boolean) =>
       runSqlite({
         batchSize: 2000,
         source: new URL(source, document.location.toString()),
+        saveFile,
       }),
-    'SQLite OPFS SAH (separate index)': (source: string) =>
+    'SQLite OPFS SAH (separate index)': (source: string, saveFile?: boolean) =>
       runSqlite({
         batchSize: 2000,
         separateIndex: true,
         source: new URL(source, document.location.toString()),
+        saveFile,
       }),
-    'SQLite OPFS SAH (separate index + triggers)': (source: string) =>
+    'SQLite OPFS SAH (separate index + triggers)': (
+      source: string,
+      saveFile?: boolean
+    ) =>
       runSqlite({
         batchSize: 2000,
         separateIndex: true,
         source: new URL(source, document.location.toString()),
         useTriggers: true,
+        saveFile,
       }),
     'wa-sqlite': (source: string) =>
       runWaSqlite({
@@ -63,7 +69,30 @@
 
       for (let i = 0; i < runs; i++) {
         results[name]![i] = inProgress;
-        const result = await test('/data/2.0.191-10k.jsonl');
+        const saveFile = false;
+        /* To save the file, use something like
+        const saveFile =
+          name === 'SQLite OPFS SAH (separate index + triggers)' &&
+          i === runs - 1;
+        */
+        const result = await test('/data/2.0.191-10k.jsonl', saveFile);
+        if (saveFile && result.file) {
+          const blob = new Blob([result.file.buffer], {
+            type: 'application/x-sqlite3',
+          });
+          const a = document.createElement('a');
+          document.body.appendChild(a);
+          a.href = window.URL.createObjectURL(blob);
+          a.download = 'words-10k.sqlite3';
+          a.addEventListener('click', function () {
+            setTimeout(function () {
+              console.log('Exported (possibly auto-downloaded) database');
+              window.URL.revokeObjectURL(a.href);
+              a.remove();
+            }, 500);
+          });
+          a.click();
+        }
 
         const insert = { dur: result.insertDur, diffMs: 0, diffPercent: 0 };
         if (name !== baseline) {
