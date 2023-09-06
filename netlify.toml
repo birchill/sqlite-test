@@ -1,0 +1,9 @@
+[build]
+publish = "public"
+command = "yarn build"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    cross-origin-opener-policy = "same-origin"
+    cross-origin-embedder-policy = "require-corp"
