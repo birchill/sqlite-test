@@ -70,10 +70,13 @@ let workerPromise: Promise<Worker> | undefined;
 function getWorker() {
   if (!workerPromise) {
     workerPromise = new Promise<Worker>((resolve, reject) => {
-      const worker = new Worker(new URL('./worker.ts', import.meta.url), {
-        name: 'worker',
-        type: 'module',
-      });
+      const worker = new Worker(
+        new URL('./sqlite-worker.ts', import.meta.url),
+        {
+          name: 'sqlite-worker',
+          type: 'module',
+        }
+      );
 
       worker.addEventListener('error', reject);
       worker.addEventListener(
