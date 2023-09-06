@@ -143,7 +143,6 @@ async function writeRecords(
 ): Promise<void> {
   await sqlite3.exec(db, 'begin transaction');
   try {
-    // TODO: Hiragana index for comparison
     for (const record of records) {
       sqlite3.bind_int(insertStmt, 1, record.id);
       sqlite3.bind_text(insertStmt, 2, JSON.stringify(record));

@@ -1,5 +1,4 @@
 /// <reference path="./sqlite3.d.ts"/>
-import { kanaToHiragana } from '@birchill/normal-jp';
 import {
   type WordDownloadRecord,
   getDownloadIterator,
@@ -56,14 +55,14 @@ async function runTest(
     db.exec(['drop table if exists words']);
 
     // Create the table
-    db.exec(['create table words(id INT PRIMARY KEY, k, km, r, rm, h, s)']);
+    db.exec(['create table words(id INT PRIMARY KEY, k, km, r, rm, s)']);
 
     const start = performance.now();
     let records: Array<WordDownloadRecord> = [];
 
     // Get records and put them in the database
     const insertStmt = db.prepare(
-      'insert into words(id, k, km, r, rm, h, s) values(?, ?, ?, ?, ?, ?, ?)'
+      'insert into words(id, k, km, r, rm, s) values(?, ?, ?, ?, ?, ?)'
     );
 
     for await (const record of getDownloadIterator({
@@ -112,7 +111,6 @@ async function writeRecords(
   records: Array<WordDownloadRecord>
 ): Promise<void> {
   db.transaction(() => {
-    // TODO: Try batching inputs like so: 'insert into t(a) values(10),(20),(30)'
     for (const record of records) {
       insertStmt
         .bind([
@@ -129,7 +127,6 @@ async function writeRecords(
                 record.rm.map((elem) => (elem === 0 ? null : elem))
               )
             : null,
-          JSON.stringify(keysToHiragana([...(record.k || []), ...record.r])),
           JSON.stringify(record.s),
         ])
         .stepReset()
@@ -235,7 +232,6 @@ async function writeRecordsWithSeparateIndex({
   records: Array<WordDownloadRecord>;
 }): Promise<void> {
   db.transaction(() => {
-    // TODO: Try batching inputs like so: 'insert into t(a) values(10),(20),(30)'
     for (const record of records) {
       insertStmt
         .bind([record.id, JSON.stringify(record)])
@@ -253,18 +249,4 @@ async function writeRecordsWithSeparateIndex({
       }
     }
   });
-}
-
-// TODO: Factor this common code out somewhere
-function keysToHiragana(values: Array<string>): Array<string> {
-  return Array.from(
-    new Set(values.map((value) => kanaToHiragana(value)).filter(hasHiragana))
-  );
-}
-
-// TODO: Factor this common code out somewhere
-function hasHiragana(str: string): boolean {
-  return [...str]
-    .map((c) => c.codePointAt(0)!)
-    .some((c) => c >= 0x3041 && c <= 0x309f);
 }

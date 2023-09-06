@@ -1,4 +1,3 @@
-import { kanaToHiragana } from '@birchill/normal-jp';
 import {
   type DBSchema,
   type IDBPDatabase,
@@ -24,8 +23,6 @@ type WordStoreRecord = Overwrite<
     rm?: Array<null | ReadingMeta>;
     km?: Array<null | KanjiMeta>;
 
-    // r and k strings with all kana converted to hiragana
-    h: Array<string>;
     // Individual from k split out into separate strings
     kc: Array<string>;
     // Gloss tokens (English and localized)
@@ -41,7 +38,6 @@ interface DatabaseSchema extends DBSchema {
     indexes: {
       k: Array<string>;
       r: Array<string>;
-      h: Array<string>;
       kc: Array<string>;
       gt_en: Array<string>;
       gt_l: Array<string>;
@@ -67,8 +63,6 @@ export async function runIdb({
       });
       wordsTable.createIndex('k', 'k', { multiEntry: true });
       wordsTable.createIndex('r', 'r', { multiEntry: true });
-
-      wordsTable.createIndex('h', 'h', { multiEntry: true });
 
       wordsTable.createIndex('kc', 'kc', { multiEntry: true });
       wordsTable.createIndex('gt_en', 'gt_en', { multiEntry: true });
@@ -177,7 +171,6 @@ function toWordStoreRecord(record: WordDownloadRecord): WordStoreRecord {
     km: record.km
       ? record.km.map((elem) => (elem === 0 ? null : elem))
       : undefined,
-    h: keysToHiragana([...(record.k || []), ...record.r]),
     kc: [],
     gt_en: [],
     gt_l: [],
@@ -195,19 +188,4 @@ function toWordStoreRecord(record: WordDownloadRecord): WordStoreRecord {
   }
 
   return result;
-}
-
-function keysToHiragana(values: Array<string>): Array<string> {
-  // We only add hiragana keys for words that actually have some hiragana in
-  // them. Any purely kanji keys should match on the 'k' index and won't benefit
-  // from converting the input and source to hiragana so we can match them.
-  return Array.from(
-    new Set(values.map((value) => kanaToHiragana(value)).filter(hasHiragana))
-  );
-}
-
-function hasHiragana(str: string): boolean {
-  return [...str]
-    .map((c) => c.codePointAt(0)!)
-    .some((c) => c >= 0x3041 && c <= 0x309f);
 }
