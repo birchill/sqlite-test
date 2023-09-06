@@ -117,10 +117,10 @@ async function runTest(
     // Measure query performance
     const queryStart = performance.now();
     db.selectArrays(
-      "select * from words, json_each(words.k) where json_each.value like '企業%'"
+      "select * from words, json_each(words.k) where json_each.value glob '企業%'"
     );
     db.selectArrays(
-      "select * from words, json_each(words.r) where json_each.value like '企業%'"
+      "select * from words, json_each(words.r) where json_each.value glob '企業%'"
     );
     const queryDur = performance.now() - queryStart;
 
@@ -184,7 +184,8 @@ async function runTestWithSeparateIndex(
     // Create the table
     db.exec([
       'create table words(id INT PRIMARY KEY NOT NULL, json JSON NOT NULL);',
-      'create table readings(id INT NOT NULL, r TEXT NOT NULL, PRIMARY KEY(id, r), FOREIGN KEY(id) REFERENCES words(id)) WITHOUT ROWID',
+      'create table readings(id INT NOT NULL, r TEXT NOT NULL, PRIMARY KEY(id, r), FOREIGN KEY(id) REFERENCES words(id)) WITHOUT ROWID;',
+      'create index readings_r on readings(r)',
     ]);
 
     if (useTriggers) {
@@ -238,7 +239,7 @@ async function runTestWithSeparateIndex(
     // Measure query performance
     const queryStart = performance.now();
     db.selectArrays(
-      "select words.json from readings join words on readings.id = words.id where readings.r like '企業%'"
+      "select words.json from readings join words on readings.id = words.id where readings.r glob '企業%'"
     );
     const queryDur = performance.now() - queryStart;
 

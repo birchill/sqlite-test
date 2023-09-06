@@ -55,6 +55,7 @@ async function runTest(
       db,
       'create table readings(id INT NOT NULL, r TEXT NOT NULL, PRIMARY KEY(id, r), FOREIGN KEY(id) REFERENCES words(id)) WITHOUT ROWID'
     );
+    await sqlite3.exec(db, 'create index readings_r on readings(r)');
 
     const start = performance.now();
     let records: Array<WordDownloadRecord> = [];
@@ -119,7 +120,7 @@ async function runTest(
     const queryStart = performance.now();
     await sqlite3.exec(
       db,
-      "select words.json from readings join words on readings.id = words.id where readings.r like '企業%'"
+      "select words.json from readings join words on readings.id = words.id where readings.r glob '企業%'"
     );
     const queryDur = performance.now() - queryStart;
 
