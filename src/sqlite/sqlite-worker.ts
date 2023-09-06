@@ -61,27 +61,21 @@ async function runTest(
     let records: Array<WordDownloadRecord> = [];
 
     // Get records and put them in the database
-    const insertStmt = db.prepare(
-      'insert into words(id, k, km, r, rm, s) values(?, ?, ?, ?, ?, ?)'
-    );
-
     for await (const record of getDownloadIterator({
       source: new URL(source),
     })) {
       records.push(record);
       if (records.length >= batchSize) {
-        await writeRecords(db, insertStmt, records);
+        await writeRecords(db, records);
         records = [];
       }
     }
 
     // Remaining records
     if (records.length) {
-      await writeRecords(db, insertStmt, records);
+      await writeRecords(db, records);
       records = [];
     }
-
-    insertStmt.finalize();
 
     const insertDur = performance.now() - start;
 
@@ -107,10 +101,13 @@ async function runTest(
 
 async function writeRecords(
   db: DB,
-  insertStmt: PreparedStatement,
   records: Array<WordDownloadRecord>
 ): Promise<void> {
   db.transaction(() => {
+    const insertStmt = db.prepare(
+      'insert into words(id, k, km, r, rm, s) values(?, ?, ?, ?, ?, ?)'
+    );
+
     for (const record of records) {
       insertStmt
         .bind([
@@ -132,6 +129,8 @@ async function writeRecords(
         .stepReset()
         .clearBindings();
     }
+
+    insertStmt.finalize();
   });
 }
 
@@ -168,11 +167,6 @@ async function runTestWithSeparateIndex(
     let records: Array<WordDownloadRecord> = [];
 
     // Get records and put them in the database
-    const insertStmt = db.prepare('insert into words(id, json) values(?, ?)');
-    const insertReadingsStmt = useTriggers
-      ? null
-      : db.prepare('insert into readings(r, id) values(?, ?)');
-
     for await (const record of getDownloadIterator({
       source: new URL(source),
     })) {
@@ -180,9 +174,8 @@ async function runTestWithSeparateIndex(
       if (records.length >= batchSize) {
         await writeRecordsWithSeparateIndex({
           db,
-          insertStmt,
-          insertReadingsStmt,
           records,
+          useTriggers,
         });
         records = [];
       }
@@ -192,14 +185,11 @@ async function runTestWithSeparateIndex(
     if (records.length) {
       await writeRecordsWithSeparateIndex({
         db,
-        insertStmt,
-        insertReadingsStmt,
+        useTriggers,
         records,
       });
       records = [];
     }
-
-    insertStmt.finalize();
 
     const insertDur = performance.now() - start;
 
@@ -222,16 +212,22 @@ async function runTestWithSeparateIndex(
 
 async function writeRecordsWithSeparateIndex({
   db,
-  insertStmt,
-  insertReadingsStmt,
   records,
+  useTriggers,
 }: {
   db: DB;
-  insertStmt: PreparedStatement;
-  insertReadingsStmt: PreparedStatement | null;
   records: Array<WordDownloadRecord>;
+  useTriggers?: boolean;
 }): Promise<void> {
   db.transaction(() => {
+    const insertStmt = db.prepare('insert into words(id, json) values(?, ?)');
+
+    // If we're not using triggers we need to manually put the readings in the
+    // readings table.
+    const insertReadingsStmt = useTriggers
+      ? null
+      : db.prepare('insert into readings(r, id) values(?, ?)');
+
     for (const record of records) {
       insertStmt
         .bind([record.id, JSON.stringify(record)])
@@ -248,5 +244,8 @@ async function writeRecordsWithSeparateIndex({
         }
       }
     }
+
+    insertReadingsStmt?.finalize();
+    insertStmt.finalize();
   });
 }
