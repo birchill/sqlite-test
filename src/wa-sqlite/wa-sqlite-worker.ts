@@ -40,7 +40,7 @@ async function runTest(
 ): Promise<{ insertDur: number; queryDur: number }> {
   const db = await sqlite3.open_v2('sqlite-test');
   try {
-    // db.exec('PRAGMA locking_mode=exclusive');
+    await sqlite3.exec(db, 'PRAGMA locking_mode=exclusive');
 
     // Drop any existing tables
     await sqlite3.exec(db, 'drop table if exists readings');
