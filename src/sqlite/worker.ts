@@ -27,44 +27,16 @@ declare var self: WorkerGlobalScope;
     const batchSize = e.data.batchSize as number;
     const separateIndex = !!e.data.separateIndex;
     const useTriggers = !!e.data.useTriggers;
-    const saveFile = !!e.data.saveFile;
 
     const testFn = separateIndex
       ? useTriggers
         ? (poolUtil: OpfsSAHPoolUtil, source: string, batchSize: number) =>
-            runTestWithSeparateIndex(
-              poolUtil,
-              source,
-              batchSize,
-              true,
-              saveFile
-            )
-        : (poolUtil: OpfsSAHPoolUtil, source: string, batchSize: number) =>
-            runTestWithSeparateIndex(
-              poolUtil,
-              source,
-              batchSize,
-              false,
-              saveFile
-            )
+            runTestWithSeparateIndex(poolUtil, source, batchSize, true)
+        : runTestWithSeparateIndex
       : runTest;
 
     testFn(poolUtil, source, batchSize).then((results) => {
-      let buffer: Uint8Array | null = null;
-      if (saveFile) {
-        buffer = sqlite3.capi.sqlite3_js_db_export(
-          (results as Awaited<ReturnType<typeof runTestWithSeparateIndex>>).db
-            .pointer
-        );
-      }
-
-      if (buffer) {
-        postMessage({ type: 'result', ...results, file: buffer }, [
-          buffer.buffer,
-        ]);
-      } else {
-        postMessage({ type: 'result', ...results });
-      }
+      postMessage({ type: 'result', ...results });
     });
   });
 
@@ -170,13 +142,11 @@ async function runTestWithSeparateIndex(
   poolUtil: OpfsSAHPoolUtil,
   source: string,
   batchSize: number,
-  useTriggers?: boolean,
-  saveFile?: boolean
+  useTriggers?: boolean
 ): Promise<{ insertDur: number; queryDur: number; db: DB }> {
   const db = new poolUtil.OpfsSAHPoolDb('/sqlite-test');
   try {
     db.exec('PRAGMA locking_mode = exclusive');
-    db.exec('PRAGMA foreign_keys = ON');
 
     // Drop any existing table
     db.exec(['drop table if exists readings;', 'drop table if exists words']);
@@ -243,16 +213,12 @@ async function runTestWithSeparateIndex(
     );
     const queryDur = performance.now() - queryStart;
 
-    if (!saveFile) {
-      // Tidy up
-      db.exec(['drop table readings;', 'drop table words']);
-    }
+    // Tidy up
+    db.exec(['drop table readings;', 'drop table words']);
 
     return { insertDur, queryDur, db };
   } finally {
-    if (!saveFile) {
-      db.close();
-    }
+    db.close();
     await poolUtil.wipeFiles();
   }
 }

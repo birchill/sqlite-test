@@ -5,14 +5,12 @@ export async function runSqlite({
   separateIndex,
   source,
   useTriggers,
-  saveFile,
 }: {
   batchSize: number;
   separateIndex?: boolean;
   source: URL;
   useTriggers?: boolean;
-  saveFile?: boolean;
-}): Promise<{ insertDur: number; queryDur: number; file?: ArrayBuffer }> {
+}): Promise<{ insertDur: number; queryDur: number }> {
   // Create worker and wait for it to be ready
   const worker = await getWorker();
 
@@ -42,11 +40,7 @@ export async function runSqlite({
       }
 
       unregister();
-      resolve({
-        insertDur: m.data.insertDur,
-        queryDur: m.data.queryDur,
-        file: m.data.file,
-      });
+      resolve({ insertDur: m.data.insertDur, queryDur: m.data.queryDur });
     }
 
     function unregister() {
@@ -67,7 +61,6 @@ export async function runSqlite({
       separateIndex,
       useTriggers,
       source: source.toString(),
-      saveFile,
     });
   });
 }
