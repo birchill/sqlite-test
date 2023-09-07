@@ -155,7 +155,7 @@ async function writeRecords(
   db: IDBPDatabase<DatabaseSchema>,
   records: Array<WordDownloadRecord>
 ): Promise<void> {
-  const tx = db.transaction(TABLE_NAME, 'readwrite');
+  const tx = db.transaction(TABLE_NAME, 'readwrite', { durability: 'relaxed' });
   const table = tx.store;
 
   try {

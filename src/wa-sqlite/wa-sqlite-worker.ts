@@ -13,7 +13,9 @@ import type { SQLiteAPI } from './sqlite-api.js';
   const sqlite3 = SQLite.Factory(module);
 
   const namespace = await import('./IDBBatchAtomicVFS.js');
-  const vfs = new namespace.IDBBatchAtomicVFS();
+  const vfs = new namespace.IDBBatchAtomicVFS('wa-sqlite', {
+    durability: 'relaxed',
+  });
   await vfs.isReady;
   sqlite3.vfs_register(vfs, true);
 
