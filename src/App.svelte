@@ -2,6 +2,7 @@
   import { runIdb } from './idb/run-idb';
   import { runSqlite } from './sqlite/run-sqlite';
   import { runWaSqlite } from './wa-sqlite/run-wa-sqlite';
+  import { runSurrealDb } from './surrealdb/run-surrealdb';
 
   import RunTime from './RunTime.svelte';
 
@@ -32,6 +33,11 @@
       }),
     'wa-sqlite (IDBBatchAtomicVFS)': (source: string) =>
       runWaSqlite({
+        batchSize: 2000,
+        source: new URL(source, document.location.toString()),
+      }),
+    SurrealDB: (source: string) =>
+      runSurrealDb({
         batchSize: 2000,
         source: new URL(source, document.location.toString()),
       }),
