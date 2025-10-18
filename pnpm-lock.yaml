@@ -12,18 +12,18 @@ importers:
         specifier: 8.0.3
         version: 8.0.3
       superstruct:
-        specifier: 1.0.3
-        version: 1.0.3
+        specifier: 2.0.2
+        version: 2.0.2
     devDependencies:
       '@rspack/cli':
         specifier: 1.5.8
         version: 1.5.8(@rspack/core@0.3.1(webpack-dev-server@4.13.1(webpack@5.76.0))(webpack@5.76.0))(@types/express@4.17.23)(webpack@5.76.0)
       '@tsconfig/svelte':
-        specifier: 5.0.2
-        version: 5.0.2
+        specifier: 5.0.5
+        version: 5.0.5
       prettier:
-        specifier: 3.0.3
-        version: 3.0.3
+        specifier: 3.6.2
+        version: 3.6.2
       svelte:
         specifier: 4.2.0
         version: 4.2.0
@@ -220,8 +220,8 @@ packages:
   '@swc/helpers@0.5.1':
     resolution: {integrity: sha512-sJ902EfIzn1Fa+qYmjdQqh8tPsoxyBz+8yBKC2HKUxyezKJFwPGOn7pv4WY6QuQW//ySQi5lJjA/ZT9sNWWNTg==}
 
-  '@tsconfig/svelte@5.0.2':
-    resolution: {integrity: sha512-BRbo1fOtyVbhfLyuCWw6wAWp+U8UQle+ZXu84MYYWzYSEB28dyfnRBIE99eoG+qdAC0po6L2ScIEivcT07UaMA==}
+  '@tsconfig/svelte@5.0.5':
+    resolution: {integrity: sha512-48fAnUjKye38FvMiNOj0J9I/4XlQQiZlpe9xaNPfe8vy2Y1hFBt8g1yqf2EGjVvHavo4jf2lC+TQyENCr4BJBQ==}
 
   '@types/body-parser@1.19.6':
     resolution: {integrity: sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==}
@@ -1311,8 +1311,8 @@ packages:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
     engines: {node: '>= 0.4'}
 
-  prettier@3.0.3:
-    resolution: {integrity: sha512-L/4pUDMxcNa8R/EthV08Zt42WBO4h1rarVtK0K+QJG0X187OLo7l699jWw0GKuwzkPQ//jMFA/8Xm6Fh3J/DAg==}
+  prettier@3.6.2:
+    resolution: {integrity: sha512-I7AIg5boAr5R0FFtJ6rCfD+LFsWHp81dolrFD8S79U9tb8Az2nGrJncnMSnys+bpQJfRUzqs9hnA81OAA3hCuQ==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -1557,8 +1557,8 @@ packages:
     resolution: {integrity: sha512-laJTa3Jb+VQpaC6DseHhF7dXVqHTfJPCRDaEbid/drOhgitgYku/letMUqOXFoWV0zIIUbjpdH2t+tYj4bQMRQ==}
     engines: {node: '>=8'}
 
-  superstruct@1.0.3:
-    resolution: {integrity: sha512-8iTn3oSS8nRGn+C2pgXSKPI3jmpm6FExNazNpjvqS6ZUJQCej3PUXEKM8NjHBOs54ExM+LPW/FBRhymrdcCiSg==}
+  superstruct@2.0.2:
+    resolution: {integrity: sha512-uV+TFRZdXsqXTL2pRvujROjdZQ4RAlBUS5BTh9IGm+jTqQntYThciG/qu57Gs69yjnVUSqdxF9YLmSnpupBW9A==}
     engines: {node: '>=14.0.0'}
 
   supports-color@8.1.1:
@@ -2129,7 +2129,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@tsconfig/svelte@5.0.2': {}
+  '@tsconfig/svelte@5.0.5': {}
 
   '@types/body-parser@1.19.6':
     dependencies:
@@ -3231,7 +3231,7 @@ snapshots:
 
   possible-typed-array-names@1.1.0: {}
 
-  prettier@3.0.3: {}
+  prettier@3.6.2: {}
 
   process-nextick-args@2.0.1: {}
 
@@ -3532,7 +3532,7 @@ snapshots:
     dependencies:
       min-indent: 1.0.1
 
-  superstruct@1.0.3: {}
+  superstruct@2.0.2: {}
 
   supports-color@8.1.1:
     dependencies:
