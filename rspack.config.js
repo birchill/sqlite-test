@@ -1,6 +1,7 @@
+import rspack from '@rspack/core';
 import * as path from 'node:path';
 import * as url from 'node:url';
-import sveltePreprocess from 'svelte-preprocess';
+import { sveltePreprocess } from 'svelte-preprocess';
 
 const mode = process.env.NODE_ENV || 'development';
 const prod = mode === 'production';
@@ -12,9 +13,6 @@ const config = {
     main: './src/index.ts',
   },
   resolve: {
-    alias: {
-      svelte: path.dirname(path.resolve('svelte/package.json')),
-    },
     extensions: ['.mjs', '.js', '.ts', '.svelte'],
     mainFields: ['svelte', 'browser', 'module', 'main'],
   },
@@ -27,6 +25,19 @@ const config = {
   module: {
     rules: [
       {
+        test: /\.ts$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'builtin:swc-loader',
+          /** @type {import('@rspack/core').SwcLoaderOptions} */
+          options: {
+            sourceMaps: true,
+            jsc: { parser: { syntax: 'typescript' }, target: 'es2022' },
+          },
+        },
+        type: 'javascript/auto',
+      },
+      {
         test: /\.svelte$/,
         use: [
           {
@@ -37,15 +48,27 @@ const config = {
               },
               emitCss: prod,
               hotReload: !prod,
-              preprocess: sveltePreprocess({ sourceMap: !prod, postcss: true }),
+              preprocess: sveltePreprocess({ sourceMap: !prod }),
+            },
+          },
+        ],
+      },
+      {
+        test: /\.css$/,
+        use: [
+          rspack.CssExtractRspackPlugin.loader,
+          {
+            loader: 'css-loader',
+            options: {
+              url: false,
             },
           },
         ],
       },
     ],
   },
-  builtins: {
-    copy: {
+  plugins: [
+    new rspack.CopyRspackPlugin({
       patterns: [
         {
           from: '**/*',
@@ -62,13 +85,12 @@ const config = {
           from: 'src/wa-sqlite/wa-sqlite.wasm',
         },
       ],
-    },
-    html: [
-      {
-        template: './src/index.html',
-      },
-    ],
-  },
+    }),
+    new rspack.HtmlRspackPlugin({
+      template: './src/index.html',
+    }),
+    new rspack.CssExtractRspackPlugin({ filename: 'styles.css' }),
+  ],
   devtool: prod ? 'hidden-source-map' : 'eval-source-map',
   devServer: {
     headers: {
