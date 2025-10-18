@@ -4,8 +4,8 @@ import {
 } from '../common/download';
 import { isObject } from '../utils/is-object';
 
-import SQLiteAsyncESMFactory from './wa-sqlite-async.js';
 import * as SQLite from './sqlite-api.js';
+import SQLiteAsyncESMFactory from './wa-sqlite-async.js';
 import type { SQLiteAPI } from './sqlite-api.js';
 
 (async () => {
@@ -13,10 +13,9 @@ import type { SQLiteAPI } from './sqlite-api.js';
   const sqlite3 = SQLite.Factory(module);
 
   const namespace = await import('./IDBBatchAtomicVFS.js');
-  const vfs = new namespace.IDBBatchAtomicVFS('wa-sqlite', {
+  const vfs = await namespace.IDBBatchAtomicVFS.create('wa-sqlite', module, {
     durability: 'relaxed',
   });
-  await vfs.isReady;
   sqlite3.vfs_register(vfs, true);
 
   addEventListener('message', (e) => {
@@ -102,42 +101,32 @@ async function writeRecords(
   records: Array<WordDownloadRecord>
 ): Promise<void> {
   // Prepare insert statements
-  const insertWordsSql = sqlite3.str_new(
+  const insertStmts = sqlite3.statements(
     db,
     'insert into words(id, json) values(?, ?)'
   );
-  let insertStmt = await sqlite3.prepare_v2(
-    db,
-    sqlite3.str_value(insertWordsSql)
-  );
-  if (!insertStmt?.stmt) {
-    throw new Error('Failed to prepare insert words statement');
-  }
+  const insertStmt = await insertStmts.next().value;
+  insertStmts.return();
 
-  const insertReadingsSql = sqlite3.str_new(
+  const insertReadingsStmts = sqlite3.statements(
     db,
     'insert into readings(id, r) values(?, ?)'
   );
-  let insertReadingsStmt = await sqlite3.prepare_v2(
-    db,
-    sqlite3.str_value(insertReadingsSql)
-  );
-  if (!insertReadingsStmt?.stmt) {
-    throw new Error('Failed to prepare readings statement');
-  }
+  let insertReadingsStmt = await insertReadingsStmts.next().value;
+  insertReadingsStmts.return();
 
   await sqlite3.exec(db, 'begin transaction');
   try {
     for (const record of records) {
-      sqlite3.bind_int(insertStmt.stmt, 1, record.id);
-      sqlite3.bind_text(insertStmt.stmt, 2, JSON.stringify(record));
-      await sqlite3.step(insertStmt.stmt);
+      sqlite3.bind_int(insertStmt, 1, record.id);
+      sqlite3.bind_text(insertStmt, 2, JSON.stringify(record));
+      await sqlite3.step(insertStmt);
 
       const readings = [...new Set([...(record.k || []), ...record.r])];
       for (const reading of readings) {
-        sqlite3.bind_int(insertReadingsStmt.stmt, 1, record.id);
-        sqlite3.bind_text(insertReadingsStmt.stmt, 2, reading);
-        await sqlite3.step(insertReadingsStmt.stmt);
+        sqlite3.bind_int(insertReadingsStmt, 1, record.id);
+        sqlite3.bind_text(insertReadingsStmt, 2, reading);
+        await sqlite3.step(insertReadingsStmt);
       }
     }
 
@@ -145,10 +134,7 @@ async function writeRecords(
   } catch (e) {
     await sqlite3.exec(db, 'rollback');
   } finally {
-    sqlite3.finalize(insertReadingsStmt.stmt);
-    sqlite3.str_finish(insertReadingsSql);
-
-    sqlite3.finalize(insertStmt.stmt);
-    sqlite3.str_finish(insertWordsSql);
+    sqlite3.finalize(insertReadingsStmt);
+    sqlite3.finalize(insertStmt);
   }
 }
