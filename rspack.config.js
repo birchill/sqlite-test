@@ -93,7 +93,6 @@ const config = {
   ],
   devtool: prod ? 'hidden-source-map' : 'eval-source-map',
   devServer: {
-    allowedHosts: 'all',
     headers: {
       // This is needed to get high-performance timing
       'Cross-Origin-Opener-Policy': 'same-origin',
