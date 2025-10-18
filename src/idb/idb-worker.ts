@@ -1,9 +1,4 @@
-import {
-  type DBSchema,
-  type IDBPDatabase,
-  deleteDB,
-  openDB,
-} from 'idb/with-async-ittr';
+import { type DBSchema, type IDBPDatabase, deleteDB, openDB } from 'idb';
 
 import type { KanjiMeta, ReadingMeta } from '../common/types';
 import type { Overwrite } from '../utils/type-helpers';
