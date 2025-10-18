@@ -1,6 +1,7 @@
 <script lang="ts">
   import { runIdb } from './idb/run-idb';
   import { runSqlite } from './sqlite/run-sqlite';
+  import { runTurso } from './turso/run-turso';
   import { runWaSqlite } from './wa-sqlite/run-wa-sqlite';
 
   import RunTime from './RunTime.svelte';
@@ -32,6 +33,11 @@
       }),
     'wa-sqlite (IDBBatchAtomicVFS)': (source: string) =>
       runWaSqlite({
+        batchSize: 2000,
+        source: new URL(source, document.location.toString()),
+      }),
+    turso: (source: string) =>
+      runTurso({
         batchSize: 2000,
         source: new URL(source, document.location.toString()),
       }),
