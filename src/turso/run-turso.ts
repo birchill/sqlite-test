@@ -1,9 +1,4 @@
-import { connect, Database } from '@tursodatabase/database-wasm';
-
-import {
-  type WordDownloadRecord,
-  getDownloadIterator,
-} from '../common/download';
+import { isObject } from '../utils/is-object';
 
 export async function runTurso({
   batchSize,
@@ -12,86 +7,82 @@ export async function runTurso({
   batchSize: number;
   source: URL;
 }): Promise<{ insertDur: number; queryDur: number }> {
-  let db: Database | null = null;
-  try {
-    db = await connect('turso.db');
+  // Create worker and wait for it to be ready
+  const worker = await getWorker();
 
-    // Drop any existing tables
-    await db.exec('drop table if exists readings');
-    await db.exec('drop table if exists words');
+  return new Promise((resolve, reject) => {
+    function onError(e: any) {
+      unregister();
+      reject(e);
+    }
 
-    // Create the tables
-    await db.exec(
-      'create table words(id INT PRIMARY KEY NOT NULL, json JSON NOT NULL); ' +
-        'create table readings(id INT NOT NULL, r TEXT NOT NULL, PRIMARY KEY(id, r), FOREIGN KEY(id) REFERENCES words(id));' +
-        'create index readings_r on readings(r)'
-    );
-
-    const start = performance.now();
-    let records: Array<WordDownloadRecord> = [];
-
-    // Get records and put them in the database
-    for await (const record of getDownloadIterator({
-      source: new URL(source),
-    })) {
-      records.push(record);
-      if (records.length >= batchSize) {
-        await writeRecords(db, records);
-        records = [];
+    function onMessage(m: MessageEvent<any>) {
+      if (!isObject(m.data)) {
+        unregister();
+        reject(new Error(`Got unexpected message: ${JSON.stringify(m)}`));
+        return;
       }
+
+      if (typeof m.data.type !== 'string' || m.data.type !== 'result') {
+        unregister();
+        reject(new Error(`Got unexpected message: ${JSON.stringify(m)}`));
+        return;
+      }
+
+      if (
+        typeof m.data.insertDur !== 'number' ||
+        typeof m.data.queryDur !== 'number'
+      ) {
+        unregister();
+        reject(new Error(`Got unexpected message: ${JSON.stringify(m)}`));
+        return;
+      }
+
+      unregister();
+      resolve({ insertDur: m.data.insertDur, queryDur: m.data.queryDur });
     }
 
-    // Remaining records
-    if (records.length) {
-      await writeRecords(db, records);
-      records = [];
+    function unregister() {
+      worker.removeEventListener('message', onMessage);
+      worker.removeEventListener('error', onError);
+      worker.removeEventListener('messageerror', onError);
+      worker.removeEventListener('unhandledrejection', onError);
     }
 
-    const insertDur = performance.now() - start;
+    worker.addEventListener('message', onMessage);
+    worker.addEventListener('error', onError);
+    worker.addEventListener('messageerror', onError);
+    worker.addEventListener('unhandledrejection', onError);
 
-    // Measure query performance
-    const queryStart = performance.now();
-    await db.exec(
-      "select words.json from readings join words on readings.id = words.id where readings.r glob '企業%'"
-    );
-    const queryDur = performance.now() - queryStart;
-
-    // Tidy up
-    await db.exec('drop table readings');
-    await db.exec('drop table words');
-
-    return { insertDur, queryDur };
-  } finally {
-    await db?.close();
-  }
+    worker.postMessage({
+      type: 'start',
+      batchSize,
+      source: source.toString(),
+    });
+  });
 }
 
-async function writeRecords(
-  db: Database,
-  records: Array<WordDownloadRecord>
-): Promise<void> {
-  // Prepare insert statements
-  const insertStmt = db.prepare('insert into words(id, json) values(?, ?)');
-  const insertReadingsStmt = db.prepare(
-    'insert into readings(id, r) values(?, ?)'
-  );
+let workerPromise: Promise<Worker> | undefined;
 
-  await db.exec('begin transaction');
-  try {
-    for (const record of records) {
-      await insertStmt.run(record.id, JSON.stringify(record));
+function getWorker() {
+  if (!workerPromise) {
+    workerPromise = new Promise<Worker>((resolve, reject) => {
+      const worker = new Worker(new URL('./turso-worker.ts', import.meta.url), {
+        name: 'turso-worker',
+        type: 'module',
+      });
 
-      const readings = [...new Set([...(record.k || []), ...record.r])];
-      for (const reading of readings) {
-        await insertReadingsStmt.run(record.id, reading);
-      }
-    }
-
-    await db.exec('commit');
-  } catch (e) {
-    await db.exec('rollback');
-  } finally {
-    insertReadingsStmt.close();
-    insertStmt.close();
+      worker.addEventListener('error', reject);
+      worker.addEventListener(
+        'message',
+        (msg) => {
+          worker.removeEventListener('error', reject);
+          msg.data === 'ready' ? resolve(worker) : reject(msg);
+        },
+        { once: true }
+      );
+    });
   }
+
+  return workerPromise;
 }
