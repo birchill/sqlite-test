@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Storage size test</title>
+  </head>
+  <body>
+    <h1>Storage size test</h1>
+    <p>
+      Use the controls below to populate the 30k word data set into each backend and
+      inspect storage usage before and after the operation.
+    </p>
+    <section>
+      <h2>SQLite (OPFS)</h2>
+      <p>Status: <span id="sqlite-status">Idle</span></p>
+      <p>Quota before load: <span id="sqlite-before">–</span></p>
+      <p>Quota after last action: <span id="sqlite-after">–</span></p>
+      <button id="sqlite-load">Load data (SQLite)</button>
+      <button id="sqlite-clear">Delete data (SQLite)</button>
+    </section>
+    <section>
+      <h2>wa-sqlite (IndexedDB)</h2>
+      <p>Status: <span id="wa-sqlite-status">Idle</span></p>
+      <p>Quota before load: <span id="wa-sqlite-before">–</span></p>
+      <p>Quota after last action: <span id="wa-sqlite-after">–</span></p>
+      <button id="wa-sqlite-load">Load data (wa-sqlite)</button>
+      <button id="wa-sqlite-clear">Delete data (wa-sqlite)</button>
+    </section>
+  </body>
+</html>
