@@ -1,12 +1,13 @@
-import {
-  type WordDownloadRecord,
-  getDownloadIterator,
-} from '../common/download';
 import { isObject } from '../utils/is-object';
 
 import * as SQLite from './sqlite-api.js';
 import SQLiteAsyncESMFactory from './wa-sqlite-async.js';
 import type { SQLiteAPI } from './sqlite-api.js';
+import {
+  createWordsWithSeparateIndex,
+  dropWordsWithSeparateIndex,
+  populateWordsWithSeparateIndex,
+} from './words';
 
 (async () => {
   const module = await SQLiteAsyncESMFactory();
@@ -44,36 +45,16 @@ async function runTest(
     await sqlite3.exec(db, 'PRAGMA locking_mode=exclusive');
 
     // Drop any existing tables
-    await sqlite3.exec(db, 'drop table if exists readings');
-    await sqlite3.exec(db, 'drop table if exists words');
-
-    // Create the tables
-    await sqlite3.exec(
-      db,
-      'create table words(id INT PRIMARY KEY NOT NULL, json JSON NOT NULL); ' +
-        'create table readings(id INT NOT NULL, r TEXT NOT NULL, PRIMARY KEY(id, r), FOREIGN KEY(id) REFERENCES words(id)) WITHOUT ROWID;' +
-        'create index readings_r on readings(r)'
-    );
+    await dropWordsWithSeparateIndex({ sqlite3, db });
+    await createWordsWithSeparateIndex({ sqlite3, db });
 
     const start = performance.now();
-    let records: Array<WordDownloadRecord> = [];
-
-    // Get records and put them in the database
-    for await (const record of getDownloadIterator({
-      source: new URL(source),
-    })) {
-      records.push(record);
-      if (records.length >= batchSize) {
-        await writeRecords(sqlite3, db, records);
-        records = [];
-      }
-    }
-
-    // Remaining records
-    if (records.length) {
-      await writeRecords(sqlite3, db, records);
-      records = [];
-    }
+    await populateWordsWithSeparateIndex({
+      sqlite3,
+      db,
+      batchSize,
+      source,
+    });
 
     const insertDur = performance.now() - start;
 
@@ -86,55 +67,10 @@ async function runTest(
     const queryDur = performance.now() - queryStart;
 
     // Tidy up
-    await sqlite3.exec(db, 'drop table readings');
-    await sqlite3.exec(db, 'drop table words');
+    await dropWordsWithSeparateIndex({ sqlite3, db });
 
     return { insertDur, queryDur };
   } finally {
     await sqlite3.close(db);
-  }
-}
-
-async function writeRecords(
-  sqlite3: SQLiteAPI,
-  db: number,
-  records: Array<WordDownloadRecord>
-): Promise<void> {
-  // Prepare insert statements
-  const insertStmts = sqlite3.statements(
-    db,
-    'insert into words(id, json) values(?, ?)'
-  );
-  const insertStmt = await insertStmts.next().value;
-  insertStmts.return();
-
-  const insertReadingsStmts = sqlite3.statements(
-    db,
-    'insert into readings(id, r) values(?, ?)'
-  );
-  let insertReadingsStmt = await insertReadingsStmts.next().value;
-  insertReadingsStmts.return();
-
-  await sqlite3.exec(db, 'begin transaction');
-  try {
-    for (const record of records) {
-      sqlite3.bind_int(insertStmt, 1, record.id);
-      sqlite3.bind_text(insertStmt, 2, JSON.stringify(record));
-      await sqlite3.step(insertStmt);
-
-      const readings = [...new Set([...(record.k || []), ...record.r])];
-      for (const reading of readings) {
-        sqlite3.bind_int(insertReadingsStmt, 1, record.id);
-        sqlite3.bind_text(insertReadingsStmt, 2, reading);
-        await sqlite3.step(insertReadingsStmt);
-      }
-    }
-
-    await sqlite3.exec(db, 'commit');
-  } catch (e) {
-    await sqlite3.exec(db, 'rollback');
-  } finally {
-    sqlite3.finalize(insertReadingsStmt);
-    sqlite3.finalize(insertStmt);
   }
 }

@@ -11,6 +11,7 @@ const config = {
   context: url.fileURLToPath(new URL('./', import.meta.url)),
   entry: {
     main: './src/index.ts',
+    storageSize: './src/storage-size.ts',
   },
   resolve: {
     extensions: ['.mjs', '.js', '.ts', '.svelte'],
@@ -88,6 +89,12 @@ const config = {
     }),
     new rspack.HtmlRspackPlugin({
       template: './src/index.html',
+      chunks: ['main'],
+    }),
+    new rspack.HtmlRspackPlugin({
+      template: './src/storage-size.html',
+      filename: 'storage-size.html',
+      chunks: ['storageSize'],
     }),
     new rspack.CssExtractRspackPlugin({ filename: 'styles.css' }),
   ],
