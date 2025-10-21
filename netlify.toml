@@ -7,3 +7,9 @@ for = "/*"
 [headers.values]
 cross-origin-opener-policy = "same-origin"
 cross-origin-embedder-policy = "require-corp"
+
+[[headers]]
+for = "/*.html"
+[headers.values]
+cross-origin-opener-policy = "same-origin"
+cross-origin-embedder-policy = "require-corp"
