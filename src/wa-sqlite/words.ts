@@ -107,9 +107,6 @@ export async function writeRecords(
     throw e;
   } finally {
     sqlite3.finalize(insertStmt);
-    insertStmts.return();
-
     sqlite3.finalize(insertReadingsStmt);
-    insertReadingsStmts.return();
   }
 }

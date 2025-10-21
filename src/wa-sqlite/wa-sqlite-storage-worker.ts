@@ -60,7 +60,6 @@ type StorageMessage =
           postMessage({ type: 'done', id: message.id, action: 'clear' });
         }
       } catch (error) {
-        // XXX
         console.error(error);
         const messageText =
           error instanceof Error
