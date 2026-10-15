@@ -24,11 +24,20 @@ export function formatMilliseconds(value: number): string {
   return `${Number(value.toFixed(2))}ms`;
 }
 
+/** Relative sample standard deviation (coefficient of variation). */
+export function formatStandardDeviation(
+  mean: number,
+  stdDev: number | undefined
+): string | undefined {
+  if (stdDev === undefined) return undefined;
+  if (mean === 0) return 'n/a';
+  return `${Number(((stdDev / Math.abs(mean)) * 100).toFixed(2))}%`;
+}
+
 export function formatTiming(timing: Timing): string {
   let text = formatMilliseconds(timing.dur);
-  if (timing.stdDev !== undefined) {
-    text += ` ± ${formatMilliseconds(timing.stdDev)}`;
-  }
+  const variability = formatStandardDeviation(timing.dur, timing.stdDev);
+  if (variability !== undefined) text += ` ±${variability}`;
   if (timing.diffMs !== 0) {
     const sign = timing.diffMs > 0 ? '+' : '';
     text += ` (${sign}${formatMilliseconds(timing.diffMs)}, ${sign}${Number(timing.diffPercent.toFixed(2))}%)`;
@@ -63,7 +72,7 @@ export function resultsToMarkdown({
   const lines = [
     `Dataset: ${escapeCell(dataset)}; runs: ${runs}.`,
     runs > 1
-      ? 'Averages show mean ± sample standard deviation.'
+      ? 'Averages show mean ± relative sample standard deviation (% of mean).'
       : 'Standard deviation requires at least two runs.',
     '',
     `| ${headers.join(' | ')} |`,

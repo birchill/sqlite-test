@@ -1,37 +1,54 @@
 <script lang="ts">
+  import {
+    formatMilliseconds,
+    formatStandardDeviation,
+  } from './common/benchmark-results';
+
   export let dur: number;
   export let diffMs: number;
   export let diffPercent: number;
   export let stdDev: number | undefined = undefined;
 
-  export function round(number: number, precision: number): number {
-    const factor = Math.pow(10, precision);
-    return Math.round((number + Number.EPSILON) * factor) / factor;
-  }
+  $: variability = formatStandardDeviation(dur, stdDev);
 </script>
 
-<div>
-  {round(dur, 2).toLocaleString()}ms{#if stdDev !== undefined}
-    <span title="Sample standard deviation">
-      ± {round(stdDev, 2).toLocaleString()}ms
-    </span>
-  {/if}
+<div class="duration">
+  {formatMilliseconds(dur)}{#if variability !== undefined}{' '}<span
+      class="variability"
+      title="Sample standard deviation as a percentage of the mean"
+      >±{variability}</span
+    >{/if}
 </div>
-{#if diffMs > 0}
-  <div class="slower">
-    +{round(diffMs, 2).toLocaleString()}ms (+{round(diffPercent, 2)}%)
-  </div>
-{:else if diffMs < 0}
-  <div class="faster">
-    {round(diffMs, 2).toLocaleString()}ms ({round(diffPercent, 2)}%)
+{#if diffMs !== 0}
+  <div class:slower={diffMs > 0} class:faster={diffMs < 0} class="comparison">
+    {diffMs > 0 ? '+' : ''}{formatMilliseconds(diffMs)}
+    ({diffPercent > 0 ? '+' : ''}{Number(diffPercent.toFixed(2))}%)
   </div>
 {/if}
 
 <style>
+  .duration {
+    white-space: nowrap;
+    font-weight: 600;
+    color: #1c2b40;
+  }
+
+  .variability {
+    color: #65748a;
+    font-size: 0.85em;
+    font-weight: 400;
+  }
+
+  .comparison {
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
   .faster {
-    color: green;
+    color: #267155;
   }
   .slower {
-    color: red;
+    color: #9a5036;
   }
 </style>
