@@ -2,6 +2,7 @@
   export let dur: number;
   export let diffMs: number;
   export let diffPercent: number;
+  export let stdDev: number | undefined = undefined;
 
   export function round(number: number, precision: number): number {
     const factor = Math.pow(10, precision);
@@ -9,7 +10,13 @@
   }
 </script>
 
-<div>{round(dur, 2).toLocaleString()}ms</div>
+<div>
+  {round(dur, 2).toLocaleString()}ms{#if stdDev !== undefined}
+    <span title="Sample standard deviation">
+      ± {round(stdDev, 2).toLocaleString()}ms
+    </span>
+  {/if}
+</div>
 {#if diffMs > 0}
   <div class="slower">
     +{round(diffMs, 2).toLocaleString()}ms (+{round(diffPercent, 2)}%)

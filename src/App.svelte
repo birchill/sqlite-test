@@ -7,11 +7,16 @@
 
   import RunTime from './RunTime.svelte';
 
-  const inProgress = Symbol('in progress');
-  type Measurement = { insertDur: number; queryDur: number };
-  type Timing = { dur: number; diffMs: number; diffPercent: number };
-  type Result = { insert: Timing; query: Timing };
-  type Cell = Result | { error: string } | typeof inProgress | null;
+  import {
+    inProgress,
+    standardDeviation,
+    resultsToMarkdown,
+    type Measurement,
+    type Timing,
+    type Result,
+    type Cell,
+  } from './common/benchmark-results';
+
   const testConfigurations: Record<
     string,
     (source: string) => Promise<Measurement>
@@ -96,6 +101,31 @@
   }
   let results = emptyResults();
   let resultRuns = 5;
+  let resultDataset: keyof typeof dataSets = dataset;
+  let copyStatus = '';
+  let copying = false;
+  $: hasResults = Object.values(results).some((cells) =>
+    cells.some((cell) => cell !== null && cell !== inProgress)
+  );
+
+  async function copyResults() {
+    copying = true;
+    copyStatus = '';
+    try {
+      await navigator.clipboard.writeText(
+        resultsToMarkdown({
+          results,
+          runs: resultRuns,
+          dataset: resultDataset,
+        })
+      );
+      copyStatus = 'Copied!';
+    } catch (error) {
+      copyStatus = `Could not copy results: ${error instanceof Error ? error.message : String(error)}`;
+    } finally {
+      copying = false;
+    }
+  }
 
   function compare(result: Measurement, baseline?: Measurement): Result {
     function timing(dur: number, baselineDur = dur): Timing {
@@ -115,6 +145,8 @@
   async function runTests() {
     results = emptyResults();
     resultRuns = runs;
+    resultDataset = dataset;
+    copyStatus = '';
     let baseline: Measurement[] | undefined;
 
     for (const [name, test] of Object.entries(testConfigurations)) {
@@ -141,7 +173,14 @@
           measurements.reduce((sum, result) => sum + result.queryDur, 0) /
           runs,
       };
-      results[name]![runs] = compare(average, baseline?.[runs]);
+      const summary = compare(average, baseline?.[runs]);
+      summary.insert.stdDev = standardDeviation(
+        measurements.map((measurement) => measurement.insertDur)
+      );
+      summary.query.stdDev = standardDeviation(
+        measurements.map((measurement) => measurement.queryDur)
+      );
+      results[name]![runs] = summary;
       if (name === 'Raw IndexedDB') baseline = [...measurements, average];
     }
   }
@@ -191,7 +230,22 @@
   choose 30k to measure retrieval of matching words.
 </p>
 
-<p>Results:</p>
+<div class="result-controls">
+  <span>Results:</span>
+  <button
+    disabled={running || copying || !hasResults}
+    on:click={copyResults}
+  >Copy results as Markdown</button
+  >
+  <span role="status">{copyStatus}</span>
+</div>
+<p>
+  {#if resultRuns > 1}
+    Averages show mean ± sample standard deviation.
+  {:else}
+    Standard deviation requires at least two runs.
+  {/if}
+</p>
 
 <div
   class="results-table"
@@ -230,6 +284,13 @@
     display: flex;
     gap: 2rem;
     align-items: center;
+  }
+
+  .result-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-top: 1rem;
   }
 
   .results-table {

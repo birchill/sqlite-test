@@ -20,6 +20,11 @@ timings include fetching, parsing, validating, and writing the dataset. Engine
 initialization and schema setup happen before timing. Queries run on the same
 connection immediately after insertion, so they measure a warm database.
 
+Averages show mean ± sample standard deviation across runs. Standard deviation
+is omitted for a single run. “Copy results as Markdown” copies the full table,
+including each run, averages, comparisons, and skip/error messages, along with
+the dataset and run count associated with those results.
+
 The benchmark retains each backend's default journal and synchronous settings,
 with exclusive locking on SQLite and wa-sqlite. IDBBatchAtomicVFS and raw
 IndexedDB retain their existing relaxed durability configuration. These results
