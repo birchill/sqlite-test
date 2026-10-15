@@ -1,7 +1,6 @@
 import { isObject } from '../utils/is-object';
-import * as SQLite from './sqlite-api.js';
-import SQLiteAsyncESMFactory from './wa-sqlite-async.js';
-import type { SQLiteAPI } from './sqlite-api.js';
+import { initWaSqlite } from './init';
+import type { SQLiteAPI } from './vendor/src/sqlite-api.js';
 import {
   WA_SQLITE_STORAGE_DB_NAME,
   createWordsWithSeparateIndex,
@@ -23,14 +22,10 @@ type StorageMessage =
     };
 
 (async () => {
-  const module = await SQLiteAsyncESMFactory();
-  const sqlite3 = SQLite.Factory(module);
-
-  const namespace = await import('./IDBBatchAtomicVFS.js');
-  const vfs = await namespace.IDBBatchAtomicVFS.create('wa-sqlite', module, {
-    durability: 'relaxed',
-  });
-  sqlite3.vfs_register(vfs, true);
+  const { sqlite3 } = await initWaSqlite(
+    'IDBBatchAtomicVFS',
+    'wa-sqlite-storage-size'
+  );
 
   addEventListener('message', (event: MessageEvent) => {
     const data = event.data;

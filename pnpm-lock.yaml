@@ -1,3 +1,161 @@
+---
+lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    configDependencies: {}
+    packageManagerDependencies:
+      pnpm:
+        specifier: 12.11.2
+        version: 12.11.2
+
+packages:
+
+  '@pnpm/exe.android-arm64@12.11.2':
+    resolution: {integrity: sha512-owLw13OfPkEoY+hLBNeeG+dCFhywr7q2d/EHPz4mNL2RhKnv8gNwMARkjkiDQu234aItVwFNDeGnmQXm+ikkAg==}
+    cpu: [arm64]
+    os: [android]
+
+  '@pnpm/exe.android-x64@12.11.2':
+    resolution: {integrity: sha512-GYPkVebl4iokOA/4MPSpGoUVfFlsth7uqOCe1XiaiM23LAdvUOMJBObqHJijr89ZqjwHm9pO6vO45GRwJ2U2qA==}
+    cpu: [x64]
+    os: [android]
+
+  '@pnpm/exe.darwin-arm64@12.11.2':
+    resolution: {integrity: sha512-n9M4On66y8FDxUAKgMO1FXt0qihyG4e+56p3/F0uo8Bx9KplW8BwKVnXigzCJ8aNM6sVVPkOE6M9XXbeVIxnZA==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@pnpm/exe.darwin-x64@12.11.2':
+    resolution: {integrity: sha512-oSW7n3sBT0c0cyk4kj10T2Y6Mpm+OFEiCAWozgX039tdoI6yqJF1uaFD3sw7ugLdu6VV3+uY0pa1TUZIPdxDWA==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@pnpm/exe.freebsd-x64@12.11.2':
+    resolution: {integrity: sha512-qbzc3KoDpa/Lkf8vs3jnDe6dUUbso+6eLIyssYFMiliLpYNxn8dirk11YoNnOQcdHVB50v5RFls1Yid6ttT5pg==}
+    cpu: [x64]
+    os: [freebsd]
+
+  '@pnpm/exe.linux-arm64-musl@12.11.2':
+    resolution: {integrity: sha512-uMEYDwKRktGwANubQ+kYCwmhNwg3Ik6qK89ahsbQ5cP30R/5FVJb/T99vr9XRUBC/A7mZI6eeT92oyVas9ACyg==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@pnpm/exe.linux-arm64@12.11.2':
+    resolution: {integrity: sha512-6e8ZAQUwFXAWHHHv5FesWqf/kEK04wuitBv5f/gxzkC0DiBfaixr+f+6JQede8SF4Ji5LcMwVFJbzAtffpWxEg==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@pnpm/exe.linux-ppc64@12.11.2':
+    resolution: {integrity: sha512-Ui8A4nepkVupx2VpuFfysEluMvWK6gTB5rgVts7Ss/+8dj0RD28x3F/seNeH/zSypgC6yKdV6qsKVQh/uffTuQ==}
+    cpu: [ppc64]
+    os: [linux]
+    libc: [glibc]
+
+  '@pnpm/exe.linux-riscv64@12.11.2':
+    resolution: {integrity: sha512-i1yLdQ5bu+wjQ+srtFoJAaY2gN/+oXHFdjul4llCeoDxHE0rTIG3R41NhHfCjyFPW4+CpbBT58933CL9sMOCnA==}
+    cpu: [riscv64]
+    os: [linux]
+    libc: [glibc]
+
+  '@pnpm/exe.linux-s390x@12.11.2':
+    resolution: {integrity: sha512-YS1/lhPjjTsN4QL50VaFZKRa3Uc/bDnhE8eKbJMFvuX06UuFS5YaiDg04APoZdfVSGqTfX27QAg7rfLMSWaqxA==}
+    cpu: [s390x]
+    os: [linux]
+    libc: [glibc]
+
+  '@pnpm/exe.linux-x64-musl@12.11.2':
+    resolution: {integrity: sha512-7eIxQR05fvJxCujUSKp5KTtehJ7QqrgqP/HD1+BcB/SaV2Be4XI1PEHiOgA1zxsiMIeMvTF6E4G4dYHrFjeXRg==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@pnpm/exe.linux-x64@12.11.2':
+    resolution: {integrity: sha512-FK7QKe24AYgppJwO3mpooYptduuvIGqKJPi5ac7MdnWkjUy46JBfYhCW0grnkWKC8YOf0x+vGviuQqJEj3SpQQ==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@pnpm/exe.win32-arm64@12.11.2':
+    resolution: {integrity: sha512-PCTjVDdJb6VvraZxrEeFv6EqEA0hhIsAySx28e95J2Tqpi88hLpgOXgNqV0vpxq9A+b8GLQfyk/D+1UlJPv/YQ==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@pnpm/exe.win32-x64@12.11.2':
+    resolution: {integrity: sha512-8sgX86OvRjJ3yZs/TvGR2L31wH9ScPZ+f+geKI3ikuB0RRiK3i4LlTRO8OXN6pdRqj8epMde4312MCjj7JsJdA==}
+    cpu: [x64]
+    os: [win32]
+
+  pnpm@12.11.2:
+    resolution: {integrity: sha512-JaUWUqGWeFr18ovabf6NxYLr76SsHRgCIc4TkCMcX7dmN4IupLbkYzznSs3LCnf3Ja8RutOBd/3t2u6BipVcuQ==}
+    engines: {node: '>=18.*'}
+    hasBin: true
+
+snapshots:
+
+  '@pnpm/exe.android-arm64@12.11.2':
+    optional: true
+
+  '@pnpm/exe.android-x64@12.11.2':
+    optional: true
+
+  '@pnpm/exe.darwin-arm64@12.11.2':
+    optional: true
+
+  '@pnpm/exe.darwin-x64@12.11.2':
+    optional: true
+
+  '@pnpm/exe.freebsd-x64@12.11.2':
+    optional: true
+
+  '@pnpm/exe.linux-arm64-musl@12.11.2':
+    optional: true
+
+  '@pnpm/exe.linux-arm64@12.11.2':
+    optional: true
+
+  '@pnpm/exe.linux-ppc64@12.11.2':
+    optional: true
+
+  '@pnpm/exe.linux-riscv64@12.11.2':
+    optional: true
+
+  '@pnpm/exe.linux-s390x@12.11.2':
+    optional: true
+
+  '@pnpm/exe.linux-x64-musl@12.11.2':
+    optional: true
+
+  '@pnpm/exe.linux-x64@12.11.2':
+    optional: true
+
+  '@pnpm/exe.win32-arm64@12.11.2':
+    optional: true
+
+  '@pnpm/exe.win32-x64@12.11.2':
+    optional: true
+
+  pnpm@12.11.2:
+    optionalDependencies:
+      '@pnpm/exe.android-arm64': 12.11.2
+      '@pnpm/exe.android-x64': 12.11.2
+      '@pnpm/exe.darwin-arm64': 12.11.2
+      '@pnpm/exe.darwin-x64': 12.11.2
+      '@pnpm/exe.freebsd-x64': 12.11.2
+      '@pnpm/exe.linux-arm64': 12.11.2
+      '@pnpm/exe.linux-arm64-musl': 12.11.2
+      '@pnpm/exe.linux-ppc64': 12.11.2
+      '@pnpm/exe.linux-riscv64': 12.11.2
+      '@pnpm/exe.linux-s390x': 12.11.2
+      '@pnpm/exe.linux-x64': 12.11.2
+      '@pnpm/exe.linux-x64-musl': 12.11.2
+      '@pnpm/exe.win32-arm64': 12.11.2
+      '@pnpm/exe.win32-x64': 12.11.2
+
+---
 lockfileVersion: '9.0'
 
 settings:
@@ -8,9 +166,12 @@ importers:
 
   .:
     dependencies:
+      '@birchill/nice-sqlite-wasm':
+        specifier: 0.3.0
+        version: 0.3.0
       '@tursodatabase/database-wasm':
-        specifier: 0.2.2
-        version: 0.2.2
+        specifier: 0.8.3
+        version: 0.8.3
       idb:
         specifier: 8.0.3
         version: 8.0.3
@@ -20,7 +181,7 @@ importers:
     devDependencies:
       '@rspack/cli':
         specifier: 1.5.8
-        version: 1.5.8(@rspack/core@1.5.8)(@types/express@4.17.23)
+        version: 1.5.8(@rspack/core@1.5.8)(@types/express@4.17.23)(debug@4.4.3)
       '@rspack/core':
         specifier: 1.5.8
         version: 1.5.8
@@ -51,6 +212,9 @@ importers:
 
 packages:
 
+  '@birchill/nice-sqlite-wasm@0.3.0':
+    resolution: {integrity: sha512-U/+6/EhF6oHDvu5wXb8sumXew11R25zoMbqU2a+2UsyNBUqHvBKODl4d1WLl9DucYYiVYBfPRwmnc7BrRy19+A==}
+
   '@discoveryjs/json-ext@0.5.7':
     resolution: {integrity: sha512-dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw==}
     engines: {node: '>=10.0.0'}
@@ -58,8 +222,14 @@ packages:
   '@emnapi/core@1.5.0':
     resolution: {integrity: sha512-sbP8GzB1WDzacS8fgNPpHlp6C9VZe+SJP3F90W9rLemaQj2PzIuTEl1qDOYQf58YIpyjViI24y9aPWCjEzY2cg==}
 
+  '@emnapi/core@1.8.1':
+    resolution: {integrity: sha512-AvT9QFpxK0Zd8J0jopedNm+w/2fIzvtPKPjqyw9jwvBaReTTqPBk9Hixaz7KbjimP+QNz605/XnjFcDAL2pqBg==}
+
   '@emnapi/runtime@1.5.0':
     resolution: {integrity: sha512-97/BJ3iXHww3djw6hYIfErCZFee7qCtrneuLa20UXFCOTCfBM2cvQHjWJ2EG0s0MtdNwInarqCTz35i4wWXHsQ==}
+
+  '@emnapi/runtime@1.8.1':
+    resolution: {integrity: sha512-mehfKSMWjjNol8659Z8KxEMrdSJDDot5SXMq00dM8BN4o+CLNXQ0xH2V7EchNHV4RmbZLmmPdEaXZc5H2FXmDg==}
 
   '@emnapi/wasi-threads@1.1.0':
     resolution: {integrity: sha512-WI0DdZ8xFSbgMjR1sFsKABJ/C5OnRrjT06JXbZKexJGrDuPTzZdDYfFlsgcCXCyf+suG5QU2e/y1Wo2V/OapLQ==}
@@ -228,14 +398,14 @@ packages:
   '@tsconfig/svelte@5.0.5':
     resolution: {integrity: sha512-48fAnUjKye38FvMiNOj0J9I/4XlQQiZlpe9xaNPfe8vy2Y1hFBt8g1yqf2EGjVvHavo4jf2lC+TQyENCr4BJBQ==}
 
-  '@tursodatabase/database-common@0.2.2':
-    resolution: {integrity: sha512-cSNpms6MIaRj29B37XzIu9yGbea0HSGDupZs8QrMxR3rKqgHJIfY04ysqDD/4lS8TNIImPlPZrZgqQz+b/FoKQ==}
+  '@tursodatabase/database-common@0.8.3':
+    resolution: {integrity: sha512-T8sMfSnRjgGzKMDVkSg0lh1Jh6dDtTWzjYFK0ZJHtKzr+zs69a7Igo4Z+sxfh+rk9gEqn2njLgRYfpMEghMVMw==}
 
-  '@tursodatabase/database-wasm-common@0.2.2':
-    resolution: {integrity: sha512-fBQk7+omGw0fjn4ZC1D1aCnj4kXRoqBwGoC63vpB6d6aR5i+es2ng1uII3vktUBsC4JmPLBj51/B59AIqM1e7w==}
+  '@tursodatabase/database-wasm-common@0.8.3':
+    resolution: {integrity: sha512-lqsbszBThqLmnSLUBcCOTqLRigv6kVhOOQonz+2JKM5nU227TTNQibnl3Q3fyfn7HOuYcgiodJgcBECnVc/TXg==}
 
-  '@tursodatabase/database-wasm@0.2.2':
-    resolution: {integrity: sha512-AsCwMYs9xRsnoWv4BFnB8dD/FbmONc1Jtspv6rNmc0E0NGtWAJu34phu7wbNjmoGoGjgZFqmCfIgfNS2LQPXGg==}
+  '@tursodatabase/database-wasm@0.8.3':
+    resolution: {integrity: sha512-rq4aTMKd1e8BaO4FoI2YPF8PXR9IlUIuyd4VwdZi0X9B3PBbFuoDJecwgrdYI9eZbQF8fRrb9hxX9hSQB/Nf/Q==}
 
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
@@ -1393,6 +1563,8 @@ packages:
 
 snapshots:
 
+  '@birchill/nice-sqlite-wasm@0.3.0': {}
+
   '@discoveryjs/json-ext@0.5.7': {}
 
   '@emnapi/core@1.5.0':
@@ -1400,7 +1572,16 @@ snapshots:
       '@emnapi/wasi-threads': 1.1.0
       tslib: 2.8.1
 
+  '@emnapi/core@1.8.1':
+    dependencies:
+      '@emnapi/wasi-threads': 1.1.0
+      tslib: 2.8.1
+
   '@emnapi/runtime@1.5.0':
+    dependencies:
+      tslib: 2.8.1
+
+  '@emnapi/runtime@1.8.1':
     dependencies:
       tslib: 2.8.1
 
@@ -1543,11 +1724,11 @@ snapshots:
       '@rspack/binding-win32-ia32-msvc': 1.5.8
       '@rspack/binding-win32-x64-msvc': 1.5.8
 
-  '@rspack/cli@1.5.8(@rspack/core@1.5.8)(@types/express@4.17.23)':
+  '@rspack/cli@1.5.8(@rspack/core@1.5.8)(@types/express@4.17.23)(debug@4.4.3)':
     dependencies:
       '@discoveryjs/json-ext': 0.5.7
       '@rspack/core': 1.5.8
-      '@rspack/dev-server': 1.1.4(@rspack/core@1.5.8)(@types/express@4.17.23)
+      '@rspack/dev-server': 1.1.4(@rspack/core@1.5.8)(@types/express@4.17.23)(debug@4.4.3)
       colorette: 2.0.20
       exit-hook: 4.0.0
       pirates: 4.0.7
@@ -1568,13 +1749,13 @@ snapshots:
       '@rspack/binding': 1.5.8
       '@rspack/lite-tapable': 1.0.1
 
-  '@rspack/dev-server@1.1.4(@rspack/core@1.5.8)(@types/express@4.17.23)':
+  '@rspack/dev-server@1.1.4(@rspack/core@1.5.8)(@types/express@4.17.23)(debug@4.4.3)':
     dependencies:
       '@rspack/core': 1.5.8
       chokidar: 3.6.0
-      http-proxy-middleware: 2.0.9(@types/express@4.17.23)
+      http-proxy-middleware: 2.0.9(@types/express@4.17.23)(debug@4.4.3)
       p-retry: 6.2.1
-      webpack-dev-server: 5.2.2
+      webpack-dev-server: 5.2.2(debug@4.4.3)
       ws: 8.18.3
     transitivePeerDependencies:
       - '@types/express'
@@ -1593,16 +1774,18 @@ snapshots:
 
   '@tsconfig/svelte@5.0.5': {}
 
-  '@tursodatabase/database-common@0.2.2': {}
+  '@tursodatabase/database-common@0.8.3': {}
 
-  '@tursodatabase/database-wasm-common@0.2.2':
+  '@tursodatabase/database-wasm-common@0.8.3':
     dependencies:
+      '@emnapi/core': 1.8.1
+      '@emnapi/runtime': 1.8.1
       '@napi-rs/wasm-runtime': 1.0.7
 
-  '@tursodatabase/database-wasm@0.2.2':
+  '@tursodatabase/database-wasm@0.8.3':
     dependencies:
-      '@tursodatabase/database-common': 0.2.2
-      '@tursodatabase/database-wasm-common': 0.2.2
+      '@tursodatabase/database-common': 0.8.3
+      '@tursodatabase/database-wasm-common': 0.8.3
 
   '@tybys/wasm-util@0.10.1':
     dependencies:
@@ -2003,7 +2186,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  follow-redirects@1.15.11: {}
+  follow-redirects@1.15.11(debug@4.4.3):
+    optionalDependencies:
+      debug: 4.4.3
 
   forwarded@0.2.0: {}
 
@@ -2086,10 +2271,10 @@ snapshots:
 
   http-parser-js@0.5.10: {}
 
-  http-proxy-middleware@2.0.9(@types/express@4.17.23):
+  http-proxy-middleware@2.0.9(@types/express@4.17.23)(debug@4.4.3):
     dependencies:
       '@types/http-proxy': 1.17.16
-      http-proxy: 1.18.1
+      http-proxy: 1.18.1(debug@4.4.3)
       is-glob: 4.0.3
       is-plain-obj: 3.0.0
       micromatch: 4.0.8
@@ -2098,10 +2283,10 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  http-proxy@1.18.1:
+  http-proxy@1.18.1(debug@4.4.3):
     dependencies:
       eventemitter3: 4.0.7
-      follow-redirects: 1.15.11
+      follow-redirects: 1.15.11(debug@4.4.3)
       requires-port: 1.0.0
     transitivePeerDependencies:
       - debug
@@ -2653,7 +2838,7 @@ snapshots:
       range-parser: 1.2.1
       schema-utils: 4.3.3
 
-  webpack-dev-server@5.2.2:
+  webpack-dev-server@5.2.2(debug@4.4.3):
     dependencies:
       '@types/bonjour': 3.5.13
       '@types/connect-history-api-fallback': 1.5.4
@@ -2671,7 +2856,7 @@ snapshots:
       connect-history-api-fallback: 2.0.0
       express: 4.21.2
       graceful-fs: 4.2.11
-      http-proxy-middleware: 2.0.9(@types/express@4.17.23)
+      http-proxy-middleware: 2.0.9(@types/express@4.17.23)(debug@4.4.3)
       ipaddr.js: 2.2.0
       launch-editor: 2.11.1
       open: 10.2.0

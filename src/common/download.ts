@@ -1,10 +1,10 @@
 import * as s from 'superstruct';
 
 import { isObject } from '../utils/is-object';
-import { Overwrite } from '../utils/type-helpers';
+import type { Overwrite } from '../utils/type-helpers';
 
 import { ljsonStreamIterator } from './ljson-stream';
-import {
+import type {
   Accent,
   CrossReference,
   KanjiMeta,

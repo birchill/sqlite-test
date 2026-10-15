@@ -1,0 +1,3 @@
+allowBuilds:
+  # Its postinstall only prints a reminder to install optional preprocessors.
+  svelte-preprocess: false

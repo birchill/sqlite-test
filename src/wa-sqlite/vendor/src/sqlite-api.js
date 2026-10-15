@@ -28,6 +28,7 @@ export function Factory(Module) {
   /** @type {SQLiteAPI} */ const sqlite3 = {};
 
   Module.retryOps = [];
+  Module.pendingOps = [];
   const sqliteFreeAddress = Module._getSqliteFree();
 
   // Allocate some space for 32-bit returned values.
@@ -35,15 +36,34 @@ export function Factory(Module) {
   const tmpPtr = [tmp, tmp + 4];
 
   const textEncoder = new TextEncoder();
+
+  // ignoreBOM keeps a leading U+FEFF instead of consuming it, so text that
+  // begins with a byte order mark is returned as it was stored.
+  const textDecoder = new TextDecoder('utf-8', { ignoreBOM: true });
+
   // Convert a JS string to a C string. sqlite3_malloc is used to allocate
-  // memory (use sqlite3_free to deallocate).
-  function createUTF8(s) {
-    if (typeof s !== 'string') return 0;
+  // memory (use sqlite3_free to deallocate). The encoded byte length is
+  // returned with the pointer so that callers can pass it to SQLite instead
+  // of -1, which stops at the first NUL.
+  function createUTF8WithLength(s) {
+    if (typeof s !== 'string') return [0, -1];
     const utf8 = textEncoder.encode(s);
     const zts = Module._sqlite3_malloc(utf8.byteLength + 1);
     Module.HEAPU8.set(utf8, zts);
     Module.HEAPU8[zts + utf8.byteLength] = 0;
-    return zts;
+    return [zts, utf8.byteLength];
+  }
+
+  function createUTF8(s) {
+    return createUTF8WithLength(s)[0];
+  }
+
+  // Read a SQLite text value of nBytes from the WASM heap, or null when there
+  // is no value there. nBytes comes from SQLite, so a NUL inside the text is
+  // decoded as the character it is instead of ending the string.
+  function readUTF8(address, nBytes) {
+    if (!address) return null;
+    return textDecoder.decode(Module.HEAPU8.subarray(address, address + nBytes));
   }
 
   /**
@@ -223,8 +243,8 @@ export function Factory(Module) {
     const f = Module.cwrap(fname, ...decl('nnnnn:n'));
     return function(stmt, i, value) {
       verifyStatement(stmt);
-      const ptr = createUTF8(value);
-      const result = f(stmt, i, ptr, -1, sqliteFreeAddress);
+      const [ptr, nBytes] = createUTF8WithLength(value);
+      const result = f(stmt, i, ptr, nBytes, sqliteFreeAddress);
       return check(fname, result, mapStmtToDB.get(stmt));
     };
   })();
@@ -368,11 +388,14 @@ export function Factory(Module) {
 
   sqlite3.column_text = (function() {
     const fname = 'sqlite3_column_text';
-    const f = Module.cwrap(fname, ...decl('nn:s'));
+    const f = Module.cwrap(fname, ...decl('nn:n'));
     return function(stmt, iCol) {
       verifyStatement(stmt);
-      const result = f(stmt, iCol);
-      return result;
+      // sqlite3_column_text() before sqlite3_column_bytes(), the order SQLite
+      // recommends: a conversion made by the second call can invalidate the
+      // pointer returned by the first.
+      const address = f(stmt, iCol);
+      return readUTF8(address, sqlite3.column_bytes(stmt, iCol));
     };
   })();
 
@@ -492,10 +515,29 @@ export function Factory(Module) {
         const rc = await retry(() => f(zFilename, tmpPtr[0], flags, zVfs));
 
         const db = Module.getValue(tmpPtr[0], '*');
-        databases.add(db);
+        if (rc !== SQLite.SQLITE_OK) {
+          // sqlite3_open_v2 usually returns a database handle even when opening fails.
+          // Capture its error before closing because close may replace the message.
+          const message = db ?
+            Module.ccall('sqlite3_errmsg', 'string', ['number'], [db]) :
+            fname;
+          const error = new SQLiteError(message, rc);
 
+          if (db) {
+            databases.add(db);
+            try {
+              await sqlite3.close(db);
+            } catch {
+              // Closing an errored handle is best effort; preserve the open error.
+            } finally {
+              databases.delete(db);
+            }
+          }
+          throw error;
+        }
+
+        databases.add(db);
         Module.ccall('RegisterExtensionFunctions', 'void', ['number'], [db]);
-        check(fname, rc);
         return db;
       } finally {
         Module._sqlite3_free(zVfs);
@@ -598,8 +640,8 @@ export function Factory(Module) {
     const fname = 'sqlite3_result_text';
     const f = Module.cwrap(fname, ...decl('nnnn:n'));
     return function(context, value) {
-      const ptr = createUTF8(value);
-      f(context, ptr, -1, sqliteFreeAddress); // void return
+      const [ptr, nBytes] = createUTF8WithLength(value);
+      f(context, ptr, nBytes, sqliteFreeAddress); // void return
     };
   })();
 
@@ -835,10 +877,11 @@ export function Factory(Module) {
 
   sqlite3.value_text = (function() {
     const fname = 'sqlite3_value_text';
-    const f = Module.cwrap(fname, ...decl('n:s'));
+    const f = Module.cwrap(fname, ...decl('n:n'));
     return function(pValue) {
-      const result = f(pValue);
-      return result;
+      // Same order as column_text(), for the same reason.
+      const address = f(pValue);
+      return readUTF8(address, sqlite3.value_bytes(pValue));
     };
   })();
 
@@ -869,18 +912,32 @@ export function Factory(Module) {
   // succeed.
   async function retry(f) {
     let rc;
-    do {
+    for (let retryCount = 0; retryCount < 2; ++retryCount) {
       // Wait for all pending retry operations to complete. This is
       // normally empty on the first loop iteration.
       if (Module.retryOps.length) {
-        await Promise.all(Module.retryOps);
-        Module.retryOps = [];
+        try { 
+          await Promise.all(Module.retryOps);
+        } finally {
+          Module.retryOps = [];
+        }
       }
       
       rc = await f();
-
-      // Retry on failure with new pending retry operations.
-    } while (rc && Module.retryOps.length);
+      if (rc === SQLite.SQLITE_OK || Module.retryOps.length === 0) {
+        if (Module.pendingOps.length) {
+          try {
+            await Promise.all(Module.pendingOps);
+          } catch (e) {
+            console.error('Error in pendingOps:', e);
+            return e.code || SQLite.SQLITE_ERROR;
+          } finally {
+            Module.pendingOps = [];
+          }
+        }
+        return rc;
+      }
+    }
     return rc;
   }
 

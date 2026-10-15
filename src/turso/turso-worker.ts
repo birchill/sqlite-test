@@ -78,8 +78,8 @@ async function runTest(
 
     // Measure query performance
     const queryStart = performance.now();
-    await db.exec(
-      "select words.json from readings join words on readings.id = words.id where readings.r glob '企業%'"
+    await db.all(
+      "select words.json from readings join words on readings.id = words.id where readings.r glob '企業*'"
     );
     const queryDur = performance.now() - queryStart;
 
@@ -102,8 +102,10 @@ async function writeRecords(
   records: Array<WordDownloadRecord>
 ): Promise<void> {
   // Prepare insert statements
-  const insertStmt = db.prepare('insert into words(id, json) values(?, ?)');
-  const insertReadingsStmt = db.prepare(
+  const insertStmt = await db.prepare(
+    'insert into words(id, json) values(?, ?)'
+  );
+  const insertReadingsStmt = await db.prepare(
     'insert into readings(id, r) values(?, ?)'
   );
 
@@ -131,12 +133,12 @@ async function writeRecords(
     throw e;
   } finally {
     try {
-      insertReadingsStmt.close();
+      await insertReadingsStmt.close();
     } catch {
       /* ignore */
     }
     try {
-      insertStmt.close();
+      await insertStmt.close();
     } catch {
       /* ignore */
     }

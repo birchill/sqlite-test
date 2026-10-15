@@ -3,39 +3,40 @@
   import { runSqlite } from './sqlite/run-sqlite';
   import { runTurso } from './turso/run-turso';
   import { runWaSqlite } from './wa-sqlite/run-wa-sqlite';
+  import { waSqliteVfsNames } from './wa-sqlite/backends';
 
   import RunTime from './RunTime.svelte';
 
   const inProgress = Symbol('in progress');
-  const testConfigurations = {
+  type Measurement = { insertDur: number; queryDur: number };
+  type Timing = { dur: number; diffMs: number; diffPercent: number };
+  type Result = { insert: Timing; query: Timing };
+  type Cell = Result | { error: string } | typeof inProgress | null;
+  const testConfigurations: Record<
+    string,
+    (source: string) => Promise<Measurement>
+  > = {
     'Raw IndexedDB': (source: string) =>
       runIdb({
-        batchSize: 2000,
-        source: new URL(source, document.location.toString()),
-      }),
-    'SQLite OPFS SAH (json_each)': (source: string) =>
-      runSqlite({
         batchSize: 2000,
         source: new URL(source, document.location.toString()),
       }),
     'SQLite OPFS SAH (index table)': (source: string) =>
       runSqlite({
         batchSize: 2000,
-        separateIndex: true,
         source: new URL(source, document.location.toString()),
       }),
-    'SQLite OPFS SAH (index + triggers)': (source: string) =>
-      runSqlite({
-        batchSize: 2000,
-        separateIndex: true,
-        source: new URL(source, document.location.toString()),
-        useTriggers: true,
-      }),
-    'wa-sqlite (IDBBatchAtomicVFS)': (source: string) =>
-      runWaSqlite({
-        batchSize: 2000,
-        source: new URL(source, document.location.toString()),
-      }),
+    ...Object.fromEntries(
+      waSqliteVfsNames.map((vfs) => [
+        `wa-sqlite (${vfs})`,
+        (source: string) =>
+          runWaSqlite({
+            batchSize: 2000,
+            source: new URL(source, document.location.toString()),
+            vfs,
+          }),
+      ])
+    ),
     turso: (source: string) =>
       runTurso({
         batchSize: 2000,
@@ -85,77 +86,63 @@
   // Results
   //
 
-  let results = Object.fromEntries(
-    Object.keys(testConfigurations).map((key) => [
-      key,
-      Array(runs + 1).fill(null),
-    ])
-  );
-  let resultRuns = 5;
-
-  async function runTests() {
-    results = Object.fromEntries(
+  function emptyResults(): Record<string, Cell[]> {
+    return Object.fromEntries(
       Object.keys(testConfigurations).map((key) => [
         key,
         Array(runs + 1).fill(null),
       ])
     );
+  }
+  let results = emptyResults();
+  let resultRuns = 5;
+
+  function compare(result: Measurement, baseline?: Measurement): Result {
+    function timing(dur: number, baselineDur = dur): Timing {
+      const diffMs = dur - baselineDur;
+      return {
+        dur,
+        diffMs,
+        diffPercent: baselineDur ? (diffMs / baselineDur) * 100 : 0,
+      };
+    }
+    return {
+      insert: timing(result.insertDur, baseline?.insertDur),
+      query: timing(result.queryDur, baseline?.queryDur),
+    };
+  }
+
+  async function runTests() {
+    results = emptyResults();
     resultRuns = runs;
+    let baseline: Measurement[] | undefined;
 
-    let baseline = null;
     for (const [name, test] of Object.entries(testConfigurations)) {
-      if (!baseline) {
-        baseline = name;
-      }
-
+      const measurements: Measurement[] = [];
       for (let i = 0; i < runs; i++) {
         results[name]![i] = inProgress;
-        const result = await test(dataSets[dataset]!);
-
-        const insert = { dur: result.insertDur, diffMs: 0, diffPercent: 0 };
-        if (name !== baseline) {
-          const baselineDur = results[baseline]![i].insert.dur;
-          insert.diffMs = insert.dur - baselineDur;
-          insert.diffPercent = (insert.diffMs / baselineDur) * 100;
+        try {
+          const result = await test(dataSets[dataset]!);
+          measurements.push(result);
+          results[name]![i] = compare(result, baseline?.[i]);
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          results[name] = Array(runs + 1).fill({ error: message });
+          break;
         }
-
-        const query = { dur: result.queryDur, diffMs: 0, diffPercent: 0 };
-        if (name !== baseline) {
-          const baselineDur = results[baseline]![i].query.dur;
-          query.diffMs = query.dur - baselineDur;
-          query.diffPercent = (query.diffMs / baselineDur) * 100;
-        }
-
-        results[name]![i] = { insert, query };
       }
-
-      const averageInsertDur =
-        results[name]!.slice(0, runs).reduce(
-          (acc, { insert: { dur } }) => acc + dur,
-          0
-        ) / runs;
-      const insert = { dur: averageInsertDur, diffMs: 0, diffPercent: 0 };
-
-      if (name !== baseline) {
-        const baselineDur = results[baseline]![runs].insert.dur;
-        insert.diffMs = insert.dur - baselineDur;
-        insert.diffPercent = (insert.diffMs / baselineDur) * 100;
-      }
-
-      const averageQueryDur =
-        results[name]!.slice(0, runs).reduce(
-          (acc, { query: { dur } }) => acc + dur,
-          0
-        ) / runs;
-      const query = { dur: averageQueryDur, diffMs: 0, diffPercent: 0 };
-
-      if (name !== baseline) {
-        const baselineDur = results[baseline]![runs].query.dur;
-        query.diffMs = query.dur - baselineDur;
-        query.diffPercent = (query.diffMs / baselineDur) * 100;
-      }
-
-      results[name]![runs] = { insert, query };
+      if (measurements.length !== runs) continue;
+      const average = {
+        insertDur:
+          measurements.reduce((sum, result) => sum + result.insertDur, 0) /
+          runs,
+        queryDur:
+          measurements.reduce((sum, result) => sum + result.queryDur, 0) /
+          runs,
+      };
+      results[name]![runs] = compare(average, baseline?.[runs]);
+      if (name === 'Raw IndexedDB') baseline = [...measurements, average];
     }
   }
 </script>
@@ -163,7 +150,12 @@
 <div class="controls">
   <div>
     <label for="dataset">Dataset:</label>
-    <select id="dataset" value={dataset} on:change={onChangeDataset}>
+    <select
+      id="dataset"
+      disabled={running}
+      value={dataset}
+      on:change={onChangeDataset}
+    >
       {#each Object.keys(dataSets) as key}
         <option value={key}>{key}</option>
       {/each}
@@ -172,7 +164,7 @@
 
   <div>
     <label for="runs">Runs:</label>
-    <select id="runs" value={runs} on:change={onChangeRuns}>
+    <select id="runs" disabled={running} value={runs} on:change={onChangeRuns}>
       {#each Array.from({ length: 10 }, (_, i) => i + 1) as index}
         <option value={index}>{index}</option>
       {/each}
@@ -194,6 +186,11 @@
   >
 </div>
 
+<p>
+  Queries match headwords starting with 企業. The 10k dataset has no matches;
+  choose 30k to measure retrieval of matching words.
+</p>
+
 <p>Results:</p>
 
 <div
@@ -211,6 +208,8 @@
       <div>
         {#if run === inProgress}
           ⌛️
+        {:else if run && 'error' in run}
+          <span class="error">{run.error}</span>
         {:else if run}
           <div class="result-section">
             <span class="label">Insert:</span>

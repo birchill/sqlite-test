@@ -1,5 +1,4 @@
 import rspack from '@rspack/core';
-import * as path from 'node:path';
 import * as url from 'node:url';
 import { sveltePreprocess } from 'svelte-preprocess';
 
@@ -22,9 +21,11 @@ const config = {
     path: url.fileURLToPath(new URL('./public', import.meta.url)),
     filename: '[name].js',
     chunkFilename: '[name].[id].js',
+    assetModuleFilename: '[name].[contenthash][ext]',
   },
   module: {
     rules: [
+      { resourceQuery: /url$/, type: 'asset/resource' },
       {
         test: /\.ts$/,
         exclude: /node_modules/,
@@ -78,12 +79,6 @@ const config = {
           globOptions: {
             dot: true,
           },
-        },
-        {
-          from: 'src/sqlite/sqlite3.wasm',
-        },
-        {
-          from: 'src/wa-sqlite/wa-sqlite.wasm',
         },
       ],
     }),

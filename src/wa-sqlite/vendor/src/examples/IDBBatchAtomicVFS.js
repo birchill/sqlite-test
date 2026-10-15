@@ -1,11 +1,11 @@
 // Copyright 2024 Roy T. Hashimoto. All Rights Reserved.
-import { FacadeVFS } from './FacadeVFS.js';
-import * as VFS from './VFS.js';
-import { WebLocksMixin } from './WebLocksMixin.js';
+import { FacadeVFS } from '../FacadeVFS.js';
+import * as VFS from '../VFS.js';
+import { WebLocksMixin } from '../WebLocksMixin.js';
 
 const RETRYABLE_ERRORS = new Set([
   'TransactionInactiveError',
-  'InvalidStateError',
+  'InvalidStateError'
 ]);
 
 /**
@@ -64,7 +64,7 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
   close() {
     this.#idb.close();
   }
-
+  
   async isReady() {
     await super.isReady();
     await this.#isReady;
@@ -72,34 +72,31 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
 
   getFilename(fileId) {
     const pathname = this.mapIdToFile.get(fileId).path;
-    return `IDB(${this.name}):${pathname}`;
+    return `IDB(${this.name}):${pathname}`
   }
-
+  
   /**
-   * @param {string?} zName
-   * @param {number} fileId
-   * @param {number} flags
-   * @param {DataView} pOutFlags
+   * @param {string?} zName 
+   * @param {number} fileId 
+   * @param {number} flags 
+   * @param {DataView} pOutFlags 
    * @returns {Promise<number>}
    */
   async jOpen(zName, fileId, flags, pOutFlags) {
     try {
-      const url = new URL(
-        zName || Math.random().toString(36).slice(2),
-        'file://'
-      );
+      const url = new URL(zName || Math.random().toString(36).slice(2), 'file://');
       const path = url.pathname;
 
       let meta = await this.#idb.q(({ metadata }) => metadata.get(path));
-      if (!meta && flags & VFS.SQLITE_OPEN_CREATE) {
+      if (!meta && (flags & VFS.SQLITE_OPEN_CREATE)) {
         meta = {
           name: path,
           fileSize: 0,
-          version: 0,
+          version: 0
         };
         await this.#idb.q(({ metadata }) => metadata.put(meta), 'rw');
       }
-
+      
       if (!meta) {
         throw new Error(`File ${path} not found`);
       }
@@ -115,8 +112,8 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
   }
 
   /**
-   * @param {string} zName
-   * @param {number} syncDir
+   * @param {string} zName 
+   * @param {number} syncDir 
    * @returns {Promise<number>}
    */
   async jDelete(zName, syncDir) {
@@ -124,14 +121,16 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
       const url = new URL(zName, 'file://');
       const path = url.pathname;
 
+      // SQLite sets syncDir when deleting a journal on a batch atomic VFS,
+      // and a journal that survives the commit would roll it back.
       this.#idb.q(({ metadata, blocks }) => {
         const range = IDBKeyRange.bound([path, -Infinity], [path, Infinity]);
         blocks.delete(range);
         metadata.delete(path);
-      }, 'rw');
+      }, 'rw', syncDir ? { durability: 'strict' } : {});
 
       if (syncDir) {
-        await this.#idb.sync(false);
+        await this.#idb.sync(true);
       }
       return VFS.SQLITE_OK;
     } catch (e) {
@@ -141,9 +140,9 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
   }
 
   /**
-   * @param {string} zName
-   * @param {number} flags
-   * @param {DataView} pResOut
+   * @param {string} zName 
+   * @param {number} flags 
+   * @param {DataView} pResOut 
    * @returns {Promise<number>}
    */
   async jAccess(zName, flags, pResOut) {
@@ -157,11 +156,11 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
     } catch (e) {
       this.lastError = e;
       return VFS.SQLITE_IOERR_ACCESS;
-    }
+    } 
   }
 
   /**
-   * @param {number} fileId
+   * @param {number} fileId 
    * @returns {Promise<number>}
    */
   async jClose(fileId) {
@@ -172,10 +171,8 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
       if (file.flags & VFS.SQLITE_OPEN_DELETEONCLOSE) {
         await this.#idb.q(({ metadata, blocks }) => {
           metadata.delete(file.path);
-          blocks.delete(
-            IDBKeyRange.bound([file.path, 0], [file.path, Infinity])
-          );
-        }, 'rw');
+          blocks.delete(IDBKeyRange.bound([file.path, 0], [file.path, Infinity]));
+        }, 'rw');        
       }
 
       if (file.needsMetadataSync) {
@@ -190,8 +187,8 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
   }
 
   /**
-   * @param {number} fileId
-   * @param {Uint8Array} pData
+   * @param {number} fileId 
+   * @param {Uint8Array} pData 
    * @param {number} iOffset
    * @returns {Promise<number>}
    */
@@ -204,13 +201,10 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
         // Fetch the IndexedDB block for this file location.
         const fileOffset = iOffset + pDataOffset;
         const block = await this.#idb.q(({ blocks }) => {
-          const range = IDBKeyRange.bound(
-            [file.path, -fileOffset],
-            [file.path, Infinity]
-          );
+          const range = IDBKeyRange.bound([file.path, -fileOffset], [file.path, Infinity]);
           return blocks.get(range);
-        });
-
+        });       
+        
         if (!block || block.data.byteLength - block.offset <= fileOffset) {
           pData.fill(0, pDataOffset);
           return VFS.SQLITE_IOERR_SHORT_READ;
@@ -221,8 +215,7 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
         const srcOffset = fileOffset + block.offset;
         const nBytesToCopy = Math.min(
           Math.max(block.data.byteLength - srcOffset, 0),
-          dst.byteLength
-        );
+          dst.byteLength);
         dst.set(block.data.subarray(srcOffset, srcOffset + nBytesToCopy));
         pDataOffset += nBytesToCopy;
       }
@@ -234,8 +227,8 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
   }
 
   /**
-   * @param {number} fileId
-   * @param {Uint8Array} pData
+   * @param {number} fileId 
+   * @param {Uint8Array} pData 
    * @param {number} iOffset
    * @returns {number}
    */
@@ -250,13 +243,8 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
           // know to remove blocks from the failed transaction.
           const pending = Object.assign(
             { pendingVersion: file.metadata.version - 1 },
-            file.metadata
-          );
-          this.#idb.q(
-            ({ metadata }) => metadata.put(pending),
-            'rw',
-            file.txOptions
-          );
+            file.metadata);
+          this.#idb.q(({ metadata }) => metadata.put(pending), 'rw', file.txOptions);
 
           file.rollback = Object.assign({}, file.metadata);
           file.metadata.version--;
@@ -270,45 +258,83 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
       const data = pData.slice();
       const version = file.metadata.version;
       const isOverwrite = iOffset < file.metadata.fileSize;
-      if (
-        !isOverwrite ||
-        file.flags & VFS.SQLITE_OPEN_MAIN_DB ||
-        file.flags & VFS.SQLITE_OPEN_TEMP_DB
-      ) {
+      if (!isOverwrite ||
+          file.flags & VFS.SQLITE_OPEN_MAIN_DB ||
+          file.flags & VFS.SQLITE_OPEN_TEMP_DB) {
         const block = {
           path: file.path,
           offset: -iOffset,
           version: version,
-          data: pData.slice(),
+          data: pData.slice()
         };
-        this.#idb.q(
-          ({ blocks }) => {
-            blocks.put(block);
-            file.changedPages.add(iOffset);
-          },
-          'rw',
-          file.txOptions
-        );
+        this.#idb.q(({ blocks }) => {
+          blocks.put(block);
+          file.changedPages.add(iOffset);
+        }, 'rw', file.txOptions);
       } else {
-        this.#idb.q(
-          async ({ blocks }) => {
-            // Read the existing block.
+        this.#idb.q(async ({ blocks }) => {
+          // File blocks in IndexedDB must never overlap. We must avoid
+          // writing a block to IDB that violates this guarantee.
+          //
+          // SQLite write ordering can cause gaps in the file where
+          // no data has yet been written. When writing in such a gap
+          // we take care not to write a new block that extends
+          // further than the end of the gap.
+          //
+          // Fetch offsets for existing blocks in IDB that might be
+          // the end of a gap.
+          //
+          // TODO: Consider one getAll() for the blocks that start inside
+          // the write, plus one get() for the block covering iOffset,
+          // instead of a get() per piece.
+          const starts = (await blocks.getAllKeys(IDBKeyRange.bound(
+            [file.path, -(iOffset + data.byteLength)],
+            [file.path, -iOffset],
+            true, true))).map(key => -key[1]).reverse();
+
+          let dataOffset = 0;
+          while (dataOffset < data.byteLength) {
+            // Limit each iteration's write to the extent of the
+            // IDB block at this location if it exists, otherwise
+            // until the start of the next block that does exist.
+            const fileOffset = iOffset + dataOffset;
+            while (starts.length && starts[0] <= fileOffset) starts.shift();
+            const pieceEnd = Math.min(
+              data.byteLength,
+              (starts[0] ?? Infinity) - iOffset);
+
             const range = IDBKeyRange.bound(
-              [file.path, -iOffset],
-              [file.path, Infinity]
-            );
+              [file.path, -fileOffset],
+              [file.path, Infinity]);
             const block = await blocks.get(range);
 
+            if (!block || block.data.byteLength - block.offset <= fileOffset) {
+              // No block reaches this offset: store up to the next one.
+              blocks.put({
+                path: file.path,
+                offset: -fileOffset,
+                version: version,
+                data: data.slice(dataOffset, pieceEnd)
+              });
+              dataOffset = pieceEnd;
+              continue;
+            }
+
             // Modify the block data.
+            const blockOffset = fileOffset + block.offset;
+            const nBytes = Math.min(
+              block.data.byteLength - blockOffset,
+              pieceEnd - dataOffset);
             // @ts-ignore
-            block.data.subarray(iOffset + block.offset).set(data);
+            block.data.subarray(blockOffset, blockOffset + nBytes)
+              .set(data.subarray(dataOffset, dataOffset + nBytes));
 
             // Write back.
             blocks.put(block);
-          },
-          'rw',
-          file.txOptions
-        );
+            dataOffset += nBytes;
+          }
+        }, 'rw', file.txOptions);
+
       }
 
       if (file.metadata.fileSize < iOffset + pData.length) {
@@ -323,25 +349,20 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
   }
 
   /**
-   * @param {number} fileId
-   * @param {number} iSize
+   * @param {number} fileId 
+   * @param {number} iSize 
    * @returns {number}
    */
   jTruncate(fileId, iSize) {
     try {
       const file = this.mapIdToFile.get(fileId);
       if (iSize < file.metadata.fileSize) {
-        this.#idb.q(
-          ({ blocks }) => {
-            const range = IDBKeyRange.bound(
-              [file.path, -Infinity],
-              [file.path, -iSize, Infinity]
-            );
-            blocks.delete(range);
-          },
-          'rw',
-          file.txOptions
-        );
+        this.#idb.q(({ blocks }) => {
+          const range = IDBKeyRange.bound(
+            [file.path, -Infinity],
+            [file.path, -iSize, Infinity]);
+          blocks.delete(range);
+        }, 'rw', file.txOptions);
         file.metadata.fileSize = iSize;
         file.needsMetadataSync = true;
       }
@@ -353,19 +374,15 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
   }
 
   /**
-   * @param {number} fileId
-   * @param {number} flags
+   * @param {number} fileId 
+   * @param {number} flags 
    * @returns {Promise<number>}
    */
   async jSync(fileId, flags) {
     try {
       const file = this.mapIdToFile.get(fileId);
       if (file.needsMetadataSync) {
-        this.#idb.q(
-          ({ metadata }) => metadata.put(file.metadata),
-          'rw',
-          file.txOptions
-        );
+        this.#idb.q(({ metadata }) => metadata.put(file.metadata), 'rw', file.txOptions);
         file.needsMetadataSync = false;
       }
 
@@ -386,8 +403,8 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
   }
 
   /**
-   * @param {number} fileId
-   * @param {DataView} pSize64
+   * @param {number} fileId 
+   * @param {DataView} pSize64 
    * @returns {number}
    */
   jFileSize(fileId, pSize64) {
@@ -402,8 +419,8 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
   }
 
   /**
-   * @param {number} fileId
-   * @param {number} lockType
+   * @param {number} fileId 
+   * @param {number} lockType 
    * @returns {Promise<number>}
    */
   async jLock(fileId, lockType) {
@@ -413,48 +430,41 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
 
     if (lockType === VFS.SQLITE_LOCK_SHARED) {
       // Update metadata.
-      file.metadata = await this.#idb.q(
-        async ({ metadata, blocks }) => {
-          // @ts-ignore
-          /** @type {Metadata} */ const m = await metadata.get(file.path);
-          if (m.pendingVersion) {
-            console.warn(`removing failed transaction ${m.pendingVersion}`);
-            await new Promise((resolve, reject) => {
-              const range = IDBKeyRange.bound(
-                [m.name, -Infinity],
-                [m.name, Infinity]
-              );
-              const request = blocks.openCursor(range);
-              request.onsuccess = () => {
-                const cursor = request.result;
-                if (cursor) {
-                  const block = cursor.value;
-                  if (block.version < m.version) {
-                    cursor.delete();
-                  }
-                  cursor.continue();
-                } else {
-                  resolve();
+      file.metadata = await this.#idb.q(async ({ metadata, blocks }) => {
+        // @ts-ignore
+        /** @type {Metadata} */ const m = await metadata.get(file.path);
+        if (m.pendingVersion) {
+          console.warn(`removing failed transaction ${m.pendingVersion}`);
+          await new Promise((resolve, reject) => {
+            const range = IDBKeyRange.bound([m.name, -Infinity], [m.name, Infinity]);
+            const request = blocks.openCursor(range);
+            request.onsuccess = () => {
+              const cursor = request.result;
+              if (cursor) {
+                const block = cursor.value;
+                if (block.version < m.version) {
+                  cursor.delete();
                 }
-              };
-              request.onerror = () => reject(request.error);
-            });
+                cursor.continue();
+              } else {
+                resolve();
+              }
+            };
+            request.onerror = () => reject(request.error);
+          })
 
-            delete m.pendingVersion;
-            metadata.put(m);
-          }
-          return m;
-        },
-        'rw',
-        file.txOptions
-      );
+          delete m.pendingVersion;
+          metadata.put(m);
+        }
+        return m;
+      }, 'rw', file.txOptions);
     }
     return result;
   }
 
   /**
-   * @param {number} fileId
-   * @param {number} lockType
+   * @param {number} fileId 
+   * @param {number} lockType 
    * @returns {Promise<number>}
    */
   async jUnlock(fileId, lockType) {
@@ -481,13 +491,10 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
           const key = extractString(pArg, 4);
           const value = extractString(pArg, 8);
           this.log?.('xFileControl', file.path, 'PRAGMA', key, value);
-          const setPragmaResponse = (response) => {
+          const setPragmaResponse = response => {
             const encoded = new TextEncoder().encode(response);
             const out = this._module._sqlite3_malloc(encoded.byteLength);
-            const outArray = this._module.HEAPU8.subarray(
-              out,
-              out + encoded.byteLength
-            );
+            const outArray = this._module.HEAPU8.subarray(out, out + encoded.byteLength);
             outArray.set(encoded);
             pArg.setUint32(0, out, true);
             return VFS.SQLITE_ERROR;
@@ -525,38 +532,29 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
               }
               break;
             case 'write_hint':
-              return super.jFileControl(
-                fileId,
-                WebLocksMixin.WRITE_HINT_OP_CODE,
-                null
-              );
-          }
+              return super.jFileControl(fileId, WebLocksMixin.WRITE_HINT_OP_CODE, null);
+            }
           break;
         case VFS.SQLITE_FCNTL_SYNC:
           this.log?.('xFileControl', file.path, 'SYNC');
           if (file.rollback) {
             const commitMetadata = Object.assign({}, file.metadata);
-            const prevFileSize = file.rollback.fileSize;
-            this.#idb.q(
-              ({ metadata, blocks }) => {
-                metadata.put(commitMetadata);
+            const prevFileSize = file.rollback.fileSize
+            this.#idb.q(({ metadata, blocks }) => {
+              metadata.put(commitMetadata);
 
-                // Remove old page versions.
-                for (const offset of file.changedPages) {
-                  if (offset < prevFileSize) {
-                    const range = IDBKeyRange.bound(
-                      [file.path, -offset, commitMetadata.version],
-                      [file.path, -offset, Infinity],
-                      true
-                    );
-                    blocks.delete(range);
-                  }
+              // Remove old page versions.
+              for (const offset of file.changedPages) {
+                if (offset < prevFileSize) {
+                  const range = IDBKeyRange.bound(
+                    [file.path, -offset, commitMetadata.version],
+                    [file.path, -offset, Infinity],
+                    true);
+                  blocks.delete(range);
                 }
-                file.changedPages.clear();
-              },
-              'rw',
-              file.txOptions
-            );
+              }
+              file.changedPages.clear();
+            }, 'rw', file.txOptions);
             file.needsMetadataSync = false;
             file.rollback = null;
           }
@@ -573,23 +571,15 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
           this.log?.('xFileControl', file.path, 'ROLLBACK_ATOMIC_WRITE');
           file.metadata = file.rollback;
           const rollbackMetadata = Object.assign({}, file.metadata);
-          this.#idb.q(
-            ({ metadata, blocks }) => {
-              metadata.put(rollbackMetadata);
+          this.#idb.q(({ metadata, blocks }) => {
+            metadata.put(rollbackMetadata);
 
-              // Remove pages.
-              for (const offset of file.changedPages) {
-                blocks.delete([
-                  file.path,
-                  -offset,
-                  rollbackMetadata.version - 1,
-                ]);
-              }
-              file.changedPages.clear();
-            },
-            'rw',
-            file.txOptions
-          );
+            // Remove pages.
+            for (const offset of file.changedPages) {
+              blocks.delete([file.path, -offset, rollbackMetadata.version - 1]);
+            }
+            file.changedPages.clear();
+          }, 'rw', file.txOptions);
           file.needsMetadataSync = false;
           file.rollback = null;
           return VFS.SQLITE_OK;
@@ -600,32 +590,29 @@ export class IDBBatchAtomicVFS extends WebLocksMixin(FacadeVFS) {
     }
     return super.jFileControl(fileId, op, pArg);
   }
-
+  
   /**
    * @param {number} pFile
    * @returns {number|Promise<number>}
    */
   jDeviceCharacteristics(pFile) {
-    return (
-      0 | VFS.SQLITE_IOCAP_BATCH_ATOMIC | VFS.SQLITE_IOCAP_UNDELETABLE_WHEN_OPEN
-    );
+    return 0
+    | VFS.SQLITE_IOCAP_BATCH_ATOMIC
+    | VFS.SQLITE_IOCAP_UNDELETABLE_WHEN_OPEN;
   }
 
   /**
-   * @param {Uint8Array} zBuf
+   * @param {Uint8Array} zBuf 
    * @returns {number|Promise<number>}
    */
   jGetLastError(zBuf) {
     if (this.lastError) {
       console.error(this.lastError);
       const outputArray = zBuf.subarray(0, zBuf.byteLength - 1);
-      const { written } = new TextEncoder().encodeInto(
-        this.lastError.message,
-        outputArray
-      );
+      const { written } = new TextEncoder().encodeInto(this.lastError.message, outputArray);
       zBuf[written] = 0;
     }
-    return VFS.SQLITE_OK;
+    return VFS.SQLITE_OK
   }
 }
 
@@ -645,13 +632,13 @@ export class IDBContext {
   /** @type {Promise<any>} */ #txComplete = Promise.resolve();
   /** @type {IDBRequest?} */ #request = null;
   /** @type {WeakSet<IDBTransaction>} */ #txPending = new WeakSet();
-
+  
   log = null;
 
   static async create(name) {
     const database = await new Promise((resolve, reject) => {
       const request = indexedDB.open(name, 6);
-      request.onupgradeneeded = async (event) => {
+      request.onupgradeneeded = async event => {
         const db = request.result;
         if (event.oldVersion) {
           console.log(`Upgrading IndexedDB from version ${event.oldVersion}`);
@@ -659,17 +646,14 @@ export class IDBContext {
         switch (event.oldVersion) {
           case 0:
             // Start with the original schema.
-            db.createObjectStore('blocks', {
-              keyPath: ['path', 'offset', 'version'],
-            }).createIndex('version', ['path', 'version']);
-          // fall through intentionally
+            db.createObjectStore('blocks', { keyPath: ['path', 'offset', 'version']})
+              .createIndex('version', ['path', 'version']);
+            // fall through intentionally
           case 5:
             const tx = request.transaction;
             const blocks = tx.objectStore('blocks');
             blocks.deleteIndex('version');
-            const metadata = db.createObjectStore('metadata', {
-              keyPath: 'name',
-            });
+            const metadata = db.createObjectStore('metadata', { keyPath: 'name' });
 
             await new Promise((resolve, reject) => {
               // Iterate over all the blocks.
@@ -679,11 +663,8 @@ export class IDBContext {
                 const cursor = request.result;
                 if (cursor) {
                   const block = cursor.value;
-                  if (
-                    typeof block.offset !== 'number' ||
-                    (block.path === lastBlock.path &&
-                      block.offset === lastBlock.offset)
-                  ) {
+                  if (typeof block.offset !== 'number' ||
+                      (block.path === lastBlock.path && block.offset === lastBlock.offset)) {
                     // Remove superceded block (or the "purge" info).
                     cursor.delete();
                   } else if (block.offset === 0) {
@@ -691,7 +672,7 @@ export class IDBContext {
                     metadata.put({
                       name: block.path,
                       fileSize: block.fileSize,
-                      version: block.version,
+                      version: block.version
                     });
 
                     delete block.fileSize;
@@ -723,43 +704,37 @@ export class IDBContext {
   }
 
   /**
-   * @param {(stores: Object.<string, IDBObjectStore>) => any} f
-   * @param {'ro'|'rw'} mode
+   * @param {(stores: Object.<string, IDBObjectStore>) => any} f 
+   * @param {'ro'|'rw'} mode 
    * @returns {Promise<any>}
    */
   q(f, mode = 'ro', options = {}) {
     /** @type {IDBTransactionMode} */
     const txMode = mode === 'ro' ? 'readonly' : 'readwrite';
-    const txOptions = Object.assign(
-      {
-        /** @type {IDBTransactionDurability} */ durability: 'default',
-      },
-      options
-    );
+    const txOptions = Object.assign({
+      /** @type {IDBTransactionDurability} */ durability: 'default'
+    }, options);
 
     // Ensure that queries run sequentially. If any function rejects,
     // or any request has an error, or the transaction does not commit,
     // then no subsequent functions will run until sync() or reset().
-    this.#chain = (this.#chain || Promise.resolve()).then(() =>
-      this.#q(f, txMode, txOptions)
-    );
+    this.#chain = (this.#chain || Promise.resolve())
+      .then(() => this.#q(f, txMode, txOptions));
     return this.#chain;
   }
 
   /**
-   * @param {(stores: Object.<string, IDBObjectStore>) => any} f
-   * @param {IDBTransactionMode} mode
+   * @param {(stores: Object.<string, IDBObjectStore>) => any} f 
+   * @param {IDBTransactionMode} mode 
    * @param {IDBTransactionOptions} options
    * @returns {Promise<any>}
    */
   async #q(f, mode, options) {
     /** @type {IDBTransaction} */ let tx;
-    if (
-      this.#request &&
-      this.#txPending.has(this.#request.transaction) &&
-      this.#request.transaction.mode >= mode &&
-      this.#request.transaction.durability === options.durability
-    ) {
+    if (this.#request &&
+        this.#txPending.has(this.#request.transaction) &&
+        this.#request.transaction.mode >= mode &&
+        this.#request.transaction.durability === options.durability) {
       // The previous request transaction is compatible and has
       // not yet completed.
       tx = this.#request.transaction;
@@ -767,7 +742,7 @@ export class IDBContext {
       // If the previous request is pending, wait for it to complete.
       // This ensures that the transaction will be active.
       if (this.#request.readyState === 'pending') {
-        await new Promise((resolve) => {
+        await new Promise(resolve => {
           this.#request.addEventListener('success', resolve, { once: true });
           this.#request.addEventListener('error', resolve, { once: true });
         });
@@ -783,11 +758,7 @@ export class IDBContext {
 
         // Create the new transaction.
         // @ts-ignore
-        tx = this.#database.transaction(
-          this.#database.objectStoreNames,
-          mode,
-          options
-        );
+        tx = this.#database.transaction(this.#database.objectStoreNames, mode, options);
         this.log?.('IDBTransaction open', mode);
         this.#txPending.add(tx);
         this.#txComplete = new Promise((resolve, reject) => {
@@ -806,7 +777,7 @@ export class IDBContext {
       try {
         // @ts-ignore
         // Create object store proxies.
-        const objectStores = [...tx.objectStoreNames].map((name) => {
+        const objectStores = [...tx.objectStoreNames].map(name => {
           return [name, this.proxyStoreOrIndex(tx.objectStore(name))];
         });
 
@@ -830,8 +801,8 @@ export class IDBContext {
    * Object store methods that return an IDBRequest, except for cursor
    * creation, are wrapped to return a Promise. In addition, the
    * request is used internally for chaining.
-   * @param {IDBObjectStore} objectStore
-   * @returns
+   * @param {IDBObjectStore} objectStore 
+   * @returns 
    */
   proxyStoreOrIndex(objectStore) {
     return new Proxy(objectStore, {
@@ -841,10 +812,7 @@ export class IDBContext {
           return (...args) => {
             const maybeRequest = Reflect.apply(result, target, args);
             // @ts-ignore
-            if (
-              maybeRequest instanceof IDBRequest &&
-              !property.endsWith('Cursor')
-            ) {
+            if (maybeRequest instanceof IDBRequest && !property.endsWith('Cursor')) {
               // // Debug logging.
               // this.log?.(`${target.name}.${String(property)}`, args);
               // maybeRequest.addEventListener('success', () => {
@@ -853,33 +821,29 @@ export class IDBContext {
               // maybeRequest.addEventListener('error', () => {
               //   this.log?.(`${target.name}.${String(property)} error`, maybeRequest.error);
               // });
-
+              
               // Save the request.
               this.#request = maybeRequest;
 
               // Abort the transaction on error.
-              maybeRequest.addEventListener(
-                'error',
-                () => {
-                  console.error(maybeRequest.error);
-                  maybeRequest.transaction.abort();
-                },
-                { once: true }
-              );
+              maybeRequest.addEventListener('error', () => {
+                console.error(maybeRequest.error);
+                maybeRequest.transaction.abort();
+              }, { once: true });              
 
               // Return a Promise.
               return wrap(maybeRequest);
             }
             return maybeRequest;
-          };
+          }
         }
         return result;
-      },
+      }
     });
   }
 
   /**
-   * @param {boolean} durable
+   * @param {boolean} durable 
    */
   async sync(durable) {
     if (this.#chain) {
@@ -901,7 +865,7 @@ export class IDBContext {
 }
 
 /**
- * @param {IDBRequest} request
+ * @param {IDBRequest} request 
  * @returns {Promise}
  */
 function wrap(request) {
@@ -910,3 +874,4 @@ function wrap(request) {
     request.onerror = () => reject(request.error);
   });
 }
+

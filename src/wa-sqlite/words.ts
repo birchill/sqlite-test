@@ -2,7 +2,7 @@ import {
   type WordDownloadRecord,
   getDownloadIterator,
 } from '../common/download';
-import { SQLiteAPI } from './sqlite-api.js';
+import type { SQLiteAPI } from './vendor/src/sqlite-api.js';
 
 export const WA_SQLITE_STORAGE_DB_NAME = 'storage-size';
 
@@ -57,7 +57,7 @@ export async function dropWordsWithSeparateIndex({
 }): Promise<void> {
   await sqlite3.exec(
     db,
-    'drop trigger if exists words_add; drop table if exists readings; drop table if exists words;'
+    'drop table if exists readings; drop table if exists words;'
   );
 }
 
@@ -70,31 +70,31 @@ export async function writeRecords(
   db: number,
   records: Array<WordDownloadRecord>
 ): Promise<void> {
-  const insertStmts = sqlite3.statements(
-    db,
-    'insert into words(id, json) values(?, ?)',
-    { unscoped: true }
-  );
+  const insertStmts = sqlite3
+    .statements(db, 'insert into words(id, json) values(?, ?)', {
+      unscoped: true,
+    })
+    [Symbol.asyncIterator]();
   const insertStmt = (await insertStmts.next()).value;
 
-  const insertReadingsStmts = sqlite3.statements(
-    db,
-    'insert into readings(id, r) values(?, ?)',
-    { unscoped: true }
-  );
-  let insertReadingsStmt = (await insertReadingsStmts.next()).value;
+  const insertReadingsStmts = sqlite3
+    .statements(db, 'insert into readings(id, r) values(?, ?)', {
+      unscoped: true,
+    })
+    [Symbol.asyncIterator]();
+  const insertReadingsStmt = (await insertReadingsStmts.next()).value;
 
   await sqlite3.exec(db, 'begin transaction');
   try {
     for (const record of records) {
-      sqlite3.reset(insertStmt);
+      await sqlite3.reset(insertStmt);
       sqlite3.bind_int(insertStmt, 1, record.id);
       sqlite3.bind_text(insertStmt, 2, JSON.stringify(record));
       await sqlite3.step(insertStmt);
 
       const readings = [...new Set([...(record.k || []), ...record.r])];
       for (const reading of readings) {
-        sqlite3.reset(insertReadingsStmt);
+        await sqlite3.reset(insertReadingsStmt);
         sqlite3.bind_int(insertReadingsStmt, 1, record.id);
         sqlite3.bind_text(insertReadingsStmt, 2, reading);
         await sqlite3.step(insertReadingsStmt);
@@ -106,7 +106,7 @@ export async function writeRecords(
     await sqlite3.exec(db, 'rollback');
     throw e;
   } finally {
-    sqlite3.finalize(insertStmt);
-    sqlite3.finalize(insertReadingsStmt);
+    await sqlite3.finalize(insertStmt);
+    await sqlite3.finalize(insertReadingsStmt);
   }
 }

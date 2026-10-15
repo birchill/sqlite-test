@@ -2,7 +2,7 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "lib": ["dom", "es2017", "webworker"],
+    "lib": ["dom", "es2022", "webworker"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noImplicitAny": true,

@@ -237,7 +237,11 @@ function formatEstimate(estimate: StorageEstimate): string {
     parts.push(`Usage: ${formatBytes(estimate.usage)}`);
   }
 
-  const details = estimate.usageDetails;
+  const details = (
+    estimate as StorageEstimate & {
+      usageDetails?: Record<string, number>;
+    }
+  ).usageDetails;
   if (details) {
     for (const [key, value] of Object.entries(details)) {
       if (typeof value === 'number') {

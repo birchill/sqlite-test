@@ -1,14 +1,11 @@
-/// <reference path="./sqlite3.d.ts"/>
+import { initSQLite, type OpfsSAHPoolUtil } from './init';
 import { isObject } from '../utils/is-object';
-import './sqlite3.js';
 import {
   SQLITE_STORAGE_DB_PATH,
   createWordsWithSeparateIndex,
   dropWordsWithSeparateIndex,
   populateWordsWithSeparateIndex,
 } from './words';
-
-declare var self: WorkerGlobalScope;
 
 type StorageMessage =
   | {
@@ -23,12 +20,12 @@ type StorageMessage =
     };
 
 (async () => {
-  const sqlite3 = await sqlite3InitModule({
-    print: (...args) => console.log(...args),
-    printErr: (...args) => console.error(...args),
-  });
+  const sqlite3 = await initSQLite();
 
-  const poolUtil = await sqlite3.installOpfsSAHPoolVfs({ clearOnInit: false });
+  const poolUtil = await sqlite3.installOpfsSAHPoolVfs({
+    name: 'storage-size-sahpool',
+    clearOnInit: false,
+  });
 
   addEventListener('message', (event: MessageEvent) => {
     const data = event.data;
@@ -80,12 +77,11 @@ async function loadDatabase(
     db.exec('PRAGMA locking_mode = exclusive');
     dropWordsWithSeparateIndex(db);
     db.exec(['vacuum']);
-    createWordsWithSeparateIndex({ db, useTriggers: false });
+    createWordsWithSeparateIndex({ db });
     await populateWordsWithSeparateIndex({
       db,
       batchSize,
       source,
-      useTriggers: false,
     });
   } finally {
     db.close();
