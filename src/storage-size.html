@@ -1,30 +1,104 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Storage size test</title>
   </head>
   <body>
-    <h1>Storage size test</h1>
-    <p>
-      Use the controls below to populate the 30k word data set into each backend and
-      inspect storage usage before and after the operation.
-    </p>
-    <section>
-      <h2>SQLite (OPFS)</h2>
-      <p>Status: <span id="sqlite-status">Idle</span></p>
-      <p>Quota before load: <span id="sqlite-before">–</span></p>
-      <p>Quota after last action: <span id="sqlite-after">–</span></p>
-      <button id="sqlite-load">Load data (SQLite)</button>
-      <button id="sqlite-clear">Delete data (SQLite)</button>
-    </section>
-    <section>
-      <h2>wa-sqlite (IndexedDB)</h2>
-      <p>Status: <span id="wa-sqlite-status">Idle</span></p>
-      <p>Quota before load: <span id="wa-sqlite-before">–</span></p>
-      <p>Quota after last action: <span id="wa-sqlite-after">–</span></p>
-      <button id="wa-sqlite-load">Load data (wa-sqlite)</button>
-      <button id="wa-sqlite-clear">Delete data (wa-sqlite)</button>
-    </section>
+    <main>
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Browser database benchmarks</p>
+          <h1>Storage size test</h1>
+          <p class="intro">
+            Compare storage usage before and after loading the 30k word dataset.
+          </p>
+        </div>
+        <a class="back-link" href="./">← Performance test</a>
+      </header>
+
+      <div class="backends">
+        <section class="backend" aria-labelledby="sqlite-heading">
+          <header class="backend-header">
+            <h2 id="sqlite-heading">SQLite</h2>
+            <span class="storage-type">OPFS SAH pool</span>
+          </header>
+          <div class="backend-body">
+            <p class="status">
+              <span class="status-label">Status</span>
+              <span id="sqlite-status" role="status">Idle</span>
+            </p>
+            <dl class="estimates">
+              <div>
+                <dt>Before last action</dt>
+                <dd id="sqlite-before">Not measured</dd>
+              </div>
+              <div>
+                <dt>After last action</dt>
+                <dd id="sqlite-after">Not measured</dd>
+              </div>
+              <div class="usage-change">
+                <dt>Change in usage <span>(after − before)</span></dt>
+                <dd id="sqlite-change">Not measured</dd>
+              </div>
+            </dl>
+            <div class="actions">
+              <button id="sqlite-load" class="primary">
+                Load data (SQLite)
+              </button>
+              <button id="sqlite-clear">Delete data (SQLite)</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="backend" aria-labelledby="wa-sqlite-heading">
+          <header class="backend-header">
+            <h2 id="wa-sqlite-heading">wa-sqlite</h2>
+            <span class="storage-type">IndexedDB</span>
+          </header>
+          <div class="backend-body">
+            <p class="status">
+              <span class="status-label">Status</span>
+              <span id="wa-sqlite-status" role="status">Idle</span>
+            </p>
+            <dl class="estimates">
+              <div>
+                <dt>Before last action</dt>
+                <dd id="wa-sqlite-before">Not measured</dd>
+              </div>
+              <div>
+                <dt>After last action</dt>
+                <dd id="wa-sqlite-after">Not measured</dd>
+              </div>
+              <div class="usage-change">
+                <dt>Change in usage <span>(after − before)</span></dt>
+                <dd id="wa-sqlite-change">Not measured</dd>
+              </div>
+            </dl>
+            <div class="actions">
+              <button id="wa-sqlite-load" class="primary">
+                Load data (wa-sqlite)
+              </button>
+              <button id="wa-sqlite-clear">Delete data (wa-sqlite)</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="notes" aria-label="About storage estimates">
+        <h2>Reading the estimates</h2>
+        <p>
+          Storage estimates cover this site as a whole, including both backends.
+          The usage change is the difference between the displayed before and
+          after measurements. Load one backend at a time to compare changes.
+        </p>
+        <p>
+          Loading first clears that backend’s existing data. Delete data clears
+          its tables and compacts the database; browsers may take time to update
+          their estimates.
+        </p>
+      </aside>
+    </main>
   </body>
 </html>

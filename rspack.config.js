@@ -91,7 +91,7 @@ const config = {
       filename: 'storage-size.html',
       chunks: ['storageSize'],
     }),
-    new rspack.CssExtractRspackPlugin({ filename: 'styles.css' }),
+    new rspack.CssExtractRspackPlugin({ filename: '[name].css' }),
   ],
   devtool: prod ? 'hidden-source-map' : 'eval-source-map',
   devServer: {

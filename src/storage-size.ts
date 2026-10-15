@@ -1,3 +1,4 @@
+import './storage-size.css';
 import { isObject } from './utils/is-object';
 
 const DATASET_PATH = '/data/2.0.191-30k.jsonl';
@@ -11,6 +12,7 @@ interface BackendOptions {
   statusId: string;
   beforeId: string;
   afterId: string;
+  changeId: string;
 }
 
 class BackendUI {
@@ -20,6 +22,7 @@ class BackendUI {
   private readonly statusEl: HTMLElement;
   private readonly beforeEl: HTMLElement;
   private readonly afterEl: HTMLElement;
+  private readonly changeEl: HTMLElement;
   private readonly datasetUrl: string;
   private readonly name: string;
 
@@ -29,13 +32,15 @@ class BackendUI {
     const statusEl = document.getElementById(options.statusId);
     const beforeEl = document.getElementById(options.beforeId);
     const afterEl = document.getElementById(options.afterId);
+    const changeEl = document.getElementById(options.changeId);
 
     if (
       !(loadButton instanceof HTMLButtonElement) ||
       !(clearButton instanceof HTMLButtonElement) ||
       !statusEl ||
       !beforeEl ||
-      !afterEl
+      !afterEl ||
+      !changeEl
     ) {
       throw new Error('Failed to initialise controls');
     }
@@ -46,6 +51,7 @@ class BackendUI {
     this.statusEl = statusEl;
     this.beforeEl = beforeEl;
     this.afterEl = afterEl;
+    this.changeEl = changeEl;
     this.datasetUrl = new URL(DATASET_PATH, window.location.origin).toString();
     this.name = options.name;
 
@@ -60,6 +66,7 @@ class BackendUI {
 
   private async load(): Promise<void> {
     this.setButtonsDisabled(true);
+    this.resetEstimates();
     try {
       this.setStatus('Clearing existing data...');
       await this.worker.clear();
@@ -70,6 +77,7 @@ class BackendUI {
       await this.worker.load(this.datasetUrl, BATCH_SIZE);
       const afterEstimate = await navigator.storage.estimate();
       this.afterEl.textContent = formatEstimate(afterEstimate);
+      this.showUsageChange(beforeEstimate, afterEstimate);
       this.setStatus('Load complete.');
     } catch (error) {
       this.handleError(error);
@@ -80,17 +88,45 @@ class BackendUI {
 
   private async clear(): Promise<void> {
     this.setButtonsDisabled(true);
+    this.resetEstimates();
     try {
       this.setStatus('Deleting data...');
+      const beforeEstimate = await navigator.storage.estimate();
+      this.beforeEl.textContent = formatEstimate(beforeEstimate);
       await this.worker.clear();
       const estimate = await navigator.storage.estimate();
       this.afterEl.textContent = formatEstimate(estimate);
+      this.showUsageChange(beforeEstimate, estimate);
       this.setStatus('Data deleted.');
     } catch (error) {
       this.handleError(error);
     } finally {
       this.setButtonsDisabled(false);
     }
+  }
+
+  private resetEstimates(): void {
+    this.beforeEl.textContent = 'Not measured';
+    this.afterEl.textContent = 'Not measured';
+    this.changeEl.textContent = 'Not measured';
+  }
+
+  private showUsageChange(
+    before: StorageEstimate,
+    after: StorageEstimate
+  ): void {
+    if (
+      typeof before.usage !== 'number' ||
+      typeof after.usage !== 'number' ||
+      !Number.isFinite(before.usage) ||
+      !Number.isFinite(after.usage)
+    ) {
+      this.changeEl.textContent = 'Unavailable';
+      return;
+    }
+    const change = after.usage - before.usage;
+    const sign = change > 0 ? '+' : change < 0 ? '−' : '';
+    this.changeEl.textContent = `${sign}${formatBytes(Math.abs(change))}`;
   }
 
   private setStatus(status: string): void {
@@ -254,7 +290,7 @@ function formatEstimate(estimate: StorageEstimate): string {
     parts.push(`Quota: ${formatBytes(estimate.quota)}`);
   }
 
-  return parts.join(' | ') || 'Unavailable';
+  return parts.join('\n') || 'Unavailable';
 }
 
 function formatDetailKey(key: string): string {
@@ -294,6 +330,7 @@ new BackendUI({
   statusId: 'sqlite-status',
   beforeId: 'sqlite-before',
   afterId: 'sqlite-after',
+  changeId: 'sqlite-change',
 });
 
 new BackendUI({
@@ -304,4 +341,5 @@ new BackendUI({
   statusId: 'wa-sqlite-status',
   beforeId: 'wa-sqlite-before',
   afterId: 'wa-sqlite-after',
+  changeId: 'wa-sqlite-change',
 });
