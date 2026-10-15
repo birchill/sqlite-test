@@ -34,10 +34,23 @@ export function formatStandardDeviation(
   return `${Number(((stdDev / Math.abs(mean)) * 100).toFixed(2))}%`;
 }
 
-export function formatTiming(timing: Timing): string {
+export function fastestAverages(results: Record<string, Cell[]>, runs: number) {
+  let insert: number | undefined;
+  let query: number | undefined;
+  for (const cells of Object.values(results)) {
+    const average = cells[runs];
+    if (!average || average === inProgress || 'error' in average) continue;
+    insert = Math.min(insert ?? Infinity, average.insert.dur);
+    query = Math.min(query ?? Infinity, average.query.dur);
+  }
+  return { insert, query };
+}
+
+export function formatTiming(timing: Timing, fastest = false): string {
   let text = formatMilliseconds(timing.dur);
   const variability = formatStandardDeviation(timing.dur, timing.stdDev);
   if (variability !== undefined) text += ` ±${variability}`;
+  if (fastest) text += ' (fastest)';
   if (timing.diffMs !== 0) {
     const sign = timing.diffMs > 0 ? '+' : '';
     text += ` (${sign}${formatMilliseconds(timing.diffMs)}, ${sign}${Number(timing.diffPercent.toFixed(2))}%)`;
@@ -78,13 +91,14 @@ export function resultsToMarkdown({
     `| ${headers.join(' | ')} |`,
     `| ${headers.map(() => '---').join(' | ')} |`,
   ];
+  const fastest = fastestAverages(results, runs);
   for (const [name, cells] of Object.entries(results)) {
     const values = Array.from({ length: runs + 1 }, (_, index) => {
       const cell = cells[index];
       if (!cell) return '--';
       if (cell === inProgress) return 'In progress';
       if ('error' in cell) return escapeCell(cell.error);
-      return `Insert: ${escapeCell(formatTiming(cell.insert))}<br>Query: ${escapeCell(formatTiming(cell.query))}`;
+      return `Insert: ${escapeCell(formatTiming(cell.insert, index === runs && cell.insert.dur === fastest.insert))}<br>Query: ${escapeCell(formatTiming(cell.query, index === runs && cell.query.dur === fastest.query))}`;
     });
     lines.push(`| ${[escapeCell(name), ...values].join(' | ')} |`);
   }

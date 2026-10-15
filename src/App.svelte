@@ -11,6 +11,7 @@
     inProgress,
     standardDeviation,
     resultsToMarkdown,
+    fastestAverages,
     type Measurement,
     type Timing,
     type Result,
@@ -107,6 +108,8 @@
   $: hasResults = Object.values(results).some((cells) =>
     cells.some((cell) => cell !== null && cell !== inProgress)
   );
+
+  $: fastest = fastestAverages(results, resultRuns);
 
   async function copyResults() {
     copying = true;
@@ -297,12 +300,32 @@
                   {:else if cell && 'error' in cell}
                     <span class="error">{cell.error}</span>
                   {:else if cell}
-                    <div class="result-section">
-                      <span class="label">Insert</span>
+                    <div
+                      class="result-section"
+                      class:fastest={!running &&
+                        index === resultRuns &&
+                        cell.insert.dur === fastest.insert}
+                    >
+                      <span class="label"
+                        >Insert
+                        {#if !running && index === resultRuns && cell.insert.dur === fastest.insert}
+                          <span class="winner-label">Fastest</span>
+                        {/if}
+                      </span>
                       <RunTime {...cell.insert} />
                     </div>
-                    <div class="result-section">
-                      <span class="label">Query</span>
+                    <div
+                      class="result-section"
+                      class:fastest={!running &&
+                        index === resultRuns &&
+                        cell.query.dur === fastest.query}
+                    >
+                      <span class="label"
+                        >Query
+                        {#if !running && index === resultRuns && cell.query.dur === fastest.query}
+                          <span class="winner-label">Fastest</span>
+                        {/if}
+                      </span>
                       <RunTime {...cell.query} />
                     </div>
                   {:else}
@@ -321,7 +344,10 @@
           percentage of the mean.{:else}Standard deviation requires at least two
           runs.{/if}
       </p>
-      <p>Comparisons are against raw IndexedDB. Lower times are better.</p>
+      <p>
+        Comparisons are against raw IndexedDB. The fastest averages are
+        highlighted.
+      </p>
     </div>
   </section>
 </main>
@@ -543,6 +569,23 @@
     color: #65748a;
     font-size: 0.72rem;
     font-weight: 400;
+  }
+  .result-section {
+    padding: 0.35rem 0.5rem;
+    margin-inline: -0.5rem;
+    border-left: 3px solid transparent;
+    border-radius: 4px;
+  }
+  .result-section.fastest {
+    background: #e2f2e9;
+    border-left-color: #318467;
+  }
+  .winner-label {
+    margin-left: 0.5rem;
+    color: #21644b;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
   }
   .result-section + .result-section {
     margin-top: 0.85rem;

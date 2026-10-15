@@ -29,7 +29,7 @@
 <style>
   .duration {
     white-space: nowrap;
-    font-weight: 600;
+    font-weight: 400;
     color: #1c2b40;
   }
 
